@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delta Green — Gerador de Fichas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+  :root {
+    --paper: #eee8da;
+    --paper-dark: #e2dbc9;
+    --ink: #201d18;
+    --ink-soft: #55503f;
+    --red: #7d2020;
+    --red-bright: #a33;
+    --line: #c9c0a8;
+    --black-bar: #17140f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper-dark);
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(0,0,0,0.03), transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(0,0,0,0.04), transparent 45%);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+  }
+  .header {
+    background: var(--black-bar);
+    color: var(--paper);
+    padding: 22px 24px 18px;
+    text-align: center;
+    border-bottom: 6px solid var(--red);
+  }
+  .header h1 {
+    font-family: 'Special Elite', monospace;
+    letter-spacing: 2px;
+    margin: 0 0 4px;
+    font-size: 28px;
+  }
+  .header p { margin: 0; color: #b8b2a0; font-size: 13px; letter-spacing: 1px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    max-width: 980px;
+    margin: 18px auto 0;
+    padding: 0 16px;
+  }
+  .tab {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 10px 18px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .tab.active { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 -2px 0 var(--red) inset; }
+
+  .container {
+    max-width: 980px;
+    margin: 0 auto 60px;
+    padding: 0 16px;
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .sheet {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 0 8px 8px 8px;
+    padding: 24px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+  }
+
+  .section {
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .section:last-child { border-bottom: none; }
+  .section-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    color: #fff;
+    background: var(--black-bar);
+    display: inline-block;
+    padding: 4px 10px;
+    margin-bottom: 12px;
+    border-radius: 3px;
+  }
+
+  label { display: block; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 10px; }
+  input[type=text], input[type=number], textarea, select {
+    width: 100%;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    padding: 7px 9px;
+    margin-top: 4px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fdfcf8;
+    color: var(--ink);
+  }
+  textarea { resize: vertical; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+  @media (max-width: 640px) { .field-grid { grid-template-columns: 1fr; } }
+
+  .stats-header, .skills-header, .bonds-header {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: var(--ink-soft); margin-bottom: 10px;
+  }
+  .points-total { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+  .points-total.over { color: var(--red-bright); }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 640px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-field span { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 3px; }
+
+  .derived-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 8px; }
+  @media (max-width: 640px) { .derived-grid { grid-template-columns: repeat(2, 1fr); } }
+  .derived-box {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px;
+    text-align: center;
+  }
+  .derived-box span { display: block; font-size: 11px; color: var(--ink-soft); }
+  .derived-box strong { font-size: 22px; font-family: 'IBM Plex Mono', monospace; }
+
+  .muted { color: var(--ink-soft); }
+  .small { font-size: 12px; }
+
+  .choose-group { margin-bottom: 14px; }
+  .choose-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .choose-options { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+  @media (max-width: 640px) { .choose-options { grid-template-columns: 1fr; } }
+  .choose-opt { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+
+  .skills-table { display: flex; flex-direction: column; gap: 2px; max-height: 480px; overflow-y: auto; padding-right: 4px; }
+  .skill-row {
+    display: grid;
+    grid-template-columns: 1.6fr 0.5fr 0.6fr 0.6fr auto auto;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  .skill-row:nth-child(odd) { background: var(--paper); }
+  .skill-row.disabled { opacity: 0.45; }
+  .skill-name { font-weight: 500; }
+  .skill-base, .skill-bonus, .skill-final { font-family: 'IBM Plex Mono', monospace; text-align: right; }
+  .skill-bonus { color: var(--red-bright); }
+  .skill-final { font-weight: 700; }
+  .btn-tiny {
+    width: 22px; height: 22px; border-radius: 4px; border: 1px solid var(--line);
+    background: #fff; cursor: pointer; font-weight: 700; color: var(--ink);
+  }
+  .btn-tiny:hover { background: var(--paper); }
+
+  .bond-row { display: grid; grid-template-columns: 1fr 90px; gap: 10px; margin-bottom: 8px; }
+
+  .specialized-row { grid-template-columns: 1fr 1.4fr 70px auto !important; }
+  .specialized-row select, .specialized-row input { font-size: 12.5px; padding: 4px 6px; margin: 0; }
+
+  .btn-primary {
+    background: var(--red);
+    color: #fff;
+    border: none;
+    padding: 11px 20px;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  .btn-primary:hover { background: var(--red-bright); }
+  .btn-small {
+    border: 1px solid var(--line); background: #fff; border-radius: 4px;
+    padding: 5px 10px; font-size: 12px; cursor: pointer; margin-left: 6px;
+  }
+  .btn-danger { color: var(--red-bright); border-color: var(--red-bright); }
+
+  .summary-box {
+    background: var(--black-bar);
+    color: var(--paper);
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .summary-line { margin-bottom: 3px; }
+
+  .char-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 5px; margin-bottom: 8px; background: var(--paper);
+  }
+
+  .skill-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 16px; margin-bottom: 16px; }
+  @media (max-width: 640px) { .skill-grid { grid-template-columns: 1fr; } }
+  .skill-check { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 3px 0; }
+  .skill-check .skill-val { margin-left: auto; font-family: 'IBM Plex Mono', monospace; color: var(--ink-soft); }
+
+  .result-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  .result-table th, .result-table td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; }
+  .result-table th { background: var(--paper); }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--black-bar); color: #fff; padding: 10px 18px; border-radius: 6px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: all 0.25s ease;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.error { background: var(--red-bright); }
+
+  .save-bar { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+  .live-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+  @media (max-width: 640px) { .live-grid { grid-template-columns: 1fr; } }
+  .live-item {
+    display: flex; align-items: center; gap: 8px; justify-content: space-between;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 8px 10px;
+  }
+  .live-item span { font-size: 11px; color: var(--ink-soft); min-width: 28px; }
+  .live-item strong { font-family: 'IBM Plex Mono', monospace; flex: 1; text-align: center; }
+
+  .master-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .master-card {
+    border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; margin-bottom: 10px; background: var(--paper);
+  }
+  .master-card.danger { border-color: var(--red-bright); background: #f7e9e6; }
+  .master-card-head { display: flex; gap: 10px; align-items: baseline; margin-bottom: 8px; flex-wrap: wrap; }
+  .master-ago { margin-left: auto; }
+  .master-bars { display: flex; gap: 14px; flex-wrap: wrap; }
+  .bar-item { font-size: 13px; display: flex; gap: 6px; align-items: baseline; }
+  .bar-item span { color: var(--ink-soft); font-size: 11px; }
+  .bar-item.warn strong { color: var(--red-bright); }
+  .master-bonds { margin-top: 8px; }
+  .master-warning { margin-top: 8px; color: var(--red-bright); font-size: 12.5px; font-weight: 600; }
+
+  /* ===== LOGIN GATE ===== */
+  .login-gate {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--black-bar);
+    background-image: radial-gradient(circle at 30% 20%, rgba(125,32,32,0.15), transparent 50%);
+    padding: 20px;
+  }
+  .login-box {
+    background: var(--paper);
+    border-radius: 8px;
+    padding: 32px;
+    max-width: 620px;
+    width: 100%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .login-title {
+    font-family: 'Special Elite', monospace;
+    text-align: center;
+    letter-spacing: 2px;
+    margin: 0 0 4px;
+  }
+  .login-sub { text-align: center; color: var(--ink-soft); font-size: 12px; letter-spacing: 1px; margin: 0 0 24px; }
+  .login-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 560px) { .login-cols { grid-template-columns: 1fr; } }
+  .login-col {
+    background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 16px;
+    display: flex; flex-direction: column;
+  }
+  .login-col h3 { margin: 0 0 6px; font-family: 'IBM Plex Mono', monospace; font-size: 14px; }
+  .login-col input { margin-bottom: 10px; }
+  .login-col .btn-primary { margin-top: auto; width: 100%; }
+
+  .role-bar { margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 12px; }
+  .role-bar span { color: #cbb; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .role-bar .btn-small { background: transparent; color: var(--paper); border-color: #665; }
+</style>
+</head>
+<body>
+
+<div id="login-gate" class="login-gate">
+  <div class="login-box">
+    <h1 class="login-title">DELTA GREEN</h1>
+    <p class="login-sub">GERADOR DE FICHAS — IDENTIFIQUE-SE</p>
+
+    <div class="login-cols">
+      <div class="login-col">
+        <h3>Jogador</h3>
+        <p class="muted small">Digite um apelido e crie uma senha. Da primeira vez, a senha fica salva pra esse apelido; nas próximas, use a mesma senha pra entrar de novo.</p>
+        <input type="text" id="login-nick" placeholder="Seu apelido">
+        <input type="password" id="login-nick-pass" placeholder="Crie ou digite sua senha">
+        <button class="btn-primary" id="login-player-btn">Entrar como Jogador</button>
+      </div>
+      <div class="login-col">
+        <h3>Mestre</h3>
+        <p class="muted small">Acesso ao painel de acompanhamento em tempo real de todos os agentes.</p>
+        <input type="password" id="login-master-pass" placeholder="Senha do mestre">
+        <button class="btn-primary" id="login-master-btn">Entrar como Mestre</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="app-shell" style="display:none;">
+
+<div class="header">
+  <h1>DELTA GREEN</h1>
+  <p>GERADO DE FICHAS DE AGENTE — USO RESTRITO</p>
+  <div class="role-bar">
+    <span id="role-badge"></span>
+    <button class="btn-small" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="criar" onclick="switchTab('criar')">Criar Ficha</div>
+  <div class="tab" data-tab="fichas" onclick="switchTab('fichas')">Fichas Salvas</div>
+  <div class="tab" data-tab="progressao" onclick="switchTab('progressao')">Progressão (Fim de Sessão)</div>
+  <div class="tab" data-tab="mestre" data-role="mestre" onclick="switchTab('mestre')">Mestre (Tempo Real)</div>
+</div>
+<div class="container">
+
+  <div class="tab-panel active" id="panel-criar">
+    <div class="sheet">
+      <div class="summary-box" id="panel-summary"></div>
+
+      <div class="section">
+        <div class="section-title">1. Dados Pessoais</div>
+        <div id="panel-personal"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">2. Estatísticas</div>
+        <div id="panel-stats"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">3. Atributos Derivados</div>
+        <div id="panel-derived"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">3b. Estado Atual (em jogo)</div>
+        <div id="panel-live"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">4. Profissão</div>
+        <div id="panel-profession"></div>
+        <div id="panel-choose"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">5. Perícias</div>
+        <div id="panel-skills"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">5b. Perícias Especializadas (idiomas, ciências, ofícios...)</div>
+        <div id="panel-specialized"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">6. Vínculos Pessoais</div>
+        <div id="panel-bonds"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">7. Motivações</div>
+        <div id="panel-motivations"></div>
+      </div>
+
+      <div class="save-bar">
+        <button class="btn-primary" onclick="saveCharacter()">Salvar Ficha</button>
+        <button class="btn-small" onclick="location.reload()">Nova Ficha</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-fichas">
+    <div class="sheet">
+      <div class="section-title">Fichas Salvas</div>
+      <div id="char-list"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-progressao">
+    <div class="sheet">
+      <div class="section-title">Progressão Pós-Sessão</div>
+      <label>Escolher ficha
+        <select id="prog-select"></select>
+      </label>
+      <div id="prog-skills"></div>
+    </div>
+  </div>
+  <div class="tab-panel" id="panel-mestre">
+    <div class="sheet">
+      <div class="master-header">
+        <div class="section-title">Painel do Mestre</div>
+        <span class="muted small" id="master-status">atualizando automaticamente a cada 4s</span>
+      </div>
+      <div id="master-list"></div>
+    </div>
+  </div>
+
+</div>
+
+</div><!-- fim app-shell -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============= DADOS DO SISTEMA DELTA GREEN =============
+
+const SUPABASE_URL = "https://pdbwlcaqxaaswhbyuyge.supabase.co";
+const SUPABASE_KEY = "sb_publishable_yOlwRzeVot8upsE__kviiw_5xZ459vQ";
+
+// Perícias base (nome exibido em PT-BR, valor base %)
+const SKILL_BASE = [
+  ["Contabilidade", 10],
+  ["Prontidão", 20],
+  ["Antropologia", 0],
+  ["Arqueologia", 0],
+  ["Arte", 0],
+  ["Artilharia", 0],
+  ["Atletismo", 30],
+  ["Burocracia", 10],
+  ["Ciência da Computação", 0],
+  ["Ofício", 0],
+  ["Criminologia", 10],
+  ["Demolição", 0],
+  ["Disfarce", 10],
+  ["Esquiva", 30],
+  ["Dirigir", 20],
+  ["Armas de Fogo", 20],
+  ["Primeiros Socorros", 10],
+  ["Língua Estrangeira", 0],
+  ["Perícia Forense", 0],
+  ["Maquinário Pesado", 10],
+  ["Armas Pesadas", 0],
+  ["História", 10],
+  ["HUMINT", 10],
+  ["Direito", 0],
+  ["Medicina", 0],
+  ["Armas Corpo a Corpo", 30],
+  ["Ciência Militar", 0],
+  ["Navegar", 10],
+  ["Ocultismo", 10],
+  ["Persuadir", 20],
+  ["Farmácia", 0],
+  ["Piloto", 0],
+  ["Psicoterapia", 10],
+  ["Montaria", 10],
+  ["Ciência", 0],
+  ["Procurar", 20],
+  ["SIGINT", 0],
+  ["Furtividade", 10],
+  ["Cirurgia", 0],
+  ["Sobrevivência", 10],
+  ["Nadar", 20],
+  ["Combate Desarmado", 40],
+  ["Sobrenatural", 0], // Unnatural - não pode receber pontos de bônus na criação
+];
+
+const STAT_NAMES = [
+  ["STR", "Força"],
+  ["CON", "Constituição"],
+  ["DEX", "Destreza"],
+  ["INT", "Inteligência"],
+  ["POW", "Poder"],
+  ["CHA", "Carisma"],
+];
+
+// Profissões oficiais (Agent's Handbook, p.20-28)
+// fixed: [ [nomeExibido, valor], ... ]  -- perícias fixas da profissão (some already imply a sub-choice like idioma/ofício, marcado com precisaEspecificar)
+// choose: { n: quantidade a escolher, options: [ [nome, valor], ... ] }
+const PROFESSIONS = [
+  {
+    name: "Antropólogo ou Historiador",
+    recommended: ["INT"],
+    bonds: 4,
+    fixed: [
+      ["Burocracia", 40], ["História", 60], ["Ocultismo", 40], ["Persuadir", 40],
+      ["Língua Estrangeira", 50], ["Língua Estrangeira", 40],
+    ],
+    chooseGroups: [
+      { n: 1, options: [["Antropologia", 50], ["Arqueologia", 50]] },
+      { n: 2, options: [["Antropologia", 40], ["Arqueologia", 40], ["HUMINT", 50], ["Navegar", 50], ["Montaria", 50], ["Procurar", 60], ["Sobrevivência", 50]] },
+    ],
+  },
+  {
+    name: "Cientista da Computação ou Engenheiro",
+    recommended: ["INT"],
+    bonds: 3,
+    fixed: [
+      ["Ciência da Computação", 60], ["Ofício (Eletricista)", 30], ["Ofício (Mecânico)", 30],
+      ["Ofício (Microeletrônica)", 40], ["Ciência (Matemática)", 40], ["SIGINT", 40],
+    ],
+    chooseGroups: [
+      { n: 4, options: [["Contabilidade", 50], ["Burocracia", 50], ["Ofício", 40], ["Língua Estrangeira", 40], ["Maquinário Pesado", 50], ["Direito", 40], ["Ciência", 40]] },
+    ],
+  },
+  {
+    name: "Agente Federal",
+    recommended: ["CON", "POW", "CHA"],
+    bonds: 3,
+    fixed: [
+      ["Prontidão", 50], ["Burocracia", 40], ["Criminologia", 50], ["Dirigir", 50], ["Armas de Fogo", 50],
+      ["Perícia Forense", 30], ["HUMINT", 60], ["Direito", 30], ["Persuadir", 50], ["Procurar", 50], ["Combate Desarmado", 60],
+    ],
+    chooseGroups: [
+      { n: 1, options: [["Contabilidade", 60], ["Ciência da Computação", 50], ["Língua Estrangeira", 50], ["Armas Pesadas", 50], ["Farmácia", 50]] },
+    ],
+  },
+  {
+    name: "Médico",
+    recommended: ["INT", "POW", "DEX"],
+    bonds: 3,
+    fixed: [
+      ["Burocracia", 50], ["Primeiros Socorros", 60], ["Medicina", 60], ["Persuadir", 40],
+      ["Farmácia", 50], ["Ciência (Biologia)", 60], ["Procurar", 40],
+    ],
+    chooseGroups: [
+      { n: 2, options: [["Perícia Forense", 50], ["Psicoterapia", 60], ["Ciência", 50], ["Cirurgia", 50]] },
+    ],
+  },
+  {
+    name: "Cientista",
+    recommended: ["INT"],
+    bonds: 4,
+    fixed: [
+      ["Burocracia", 40], ["Ciência da Computação", 40], ["Ciência", 60], ["Ciência", 50], ["Ciência", 50],
+    ],
+    chooseGroups: [
+      { n: 3, options: [["Contabilidade", 50], ["Ofício", 40], ["Língua Estrangeira", 40], ["Perícia Forense", 40], ["Direito", 40], ["Farmácia", 40]] },
+    ],
+  },
+  {
+    name: "Operador Especial",
+    recommended: ["STR", "CON", "POW"],
+    bonds: 2,
+    fixed: [
+      ["Prontidão", 60], ["Atletismo", 60], ["Demolição", 40], ["Armas de Fogo", 60], ["Armas Pesadas", 50],
+      ["Armas Corpo a Corpo", 50], ["Ciência Militar (Terrestre)", 60], ["Navegar", 50], ["Furtividade", 50],
+      ["Sobrevivência", 50], ["Nadar", 50], ["Combate Desarmado", 60],
+    ],
+    chooseGroups: [],
+  },
+  {
+    name: "Criminoso",
+    recommended: ["STR", "DEX"],
+    bonds: 4,
+    fixed: [
+      ["Prontidão", 50], ["Criminologia", 60], ["Esquiva", 40], ["Dirigir", 50], ["Armas de Fogo", 40],
+      ["Direito", 40], ["Armas Corpo a Corpo", 40], ["Persuadir", 50], ["Furtividade", 50], ["Combate Desarmado", 50],
+    ],
+    chooseGroups: [
+      { n: 2, options: [["Ofício (Arrombamento)", 40], ["Demolição", 40], ["Disfarce", 50], ["Língua Estrangeira", 40], ["Perícia Forense", 40], ["HUMINT", 50], ["Navegar", 50], ["Ocultismo", 50], ["Farmácia", 40]] },
+    ],
+  },
+  {
+    name: "Bombeiro",
+    recommended: ["STR", "DEX", "CON"],
+    bonds: 3,
+    fixed: [
+      ["Prontidão", 50], ["Atletismo", 60], ["Ofício (Eletricista)", 40], ["Ofício (Mecânico)", 40], ["Demolição", 50],
+      ["Dirigir", 50], ["Primeiros Socorros", 50], ["Perícia Forense", 40], ["Maquinário Pesado", 50], ["Navegar", 50], ["Procurar", 40],
+    ],
+    chooseGroups: [],
+  },
+  {
+    name: "Oficial do Serviço Exterior",
+    recommended: ["INT", "CHA"],
+    bonds: 3,
+    fixed: [
+      ["Contabilidade", 40], ["Antropologia", 40], ["Burocracia", 60], ["Língua Estrangeira", 50],
+      ["Língua Estrangeira", 50], ["Língua Estrangeira", 40], ["História", 40], ["HUMINT", 50], ["Direito", 40], ["Persuadir", 50],
+    ],
+    chooseGroups: [],
+  },
+  {
+    name: "Analista de Inteligência",
+    recommended: ["INT"],
+    bonds: 3,
+    fixed: [
+      ["Antropologia", 40], ["Burocracia", 50], ["Ciência da Computação", 40], ["Criminologia", 40],
+      ["Língua Estrangeira", 50], ["Língua Estrangeira", 50], ["Língua Estrangeira", 40], ["História", 40], ["HUMINT", 50], ["SIGINT", 40],
+    ],
+    chooseGroups: [],
+  },
+  {
+    name: "Oficial de Caso de Inteligência",
+    recommended: ["INT", "POW", "CHA"],
+    bonds: 3,
+    fixed: [
+      ["Prontidão", 50], ["Burocracia", 40], ["Criminologia", 50], ["Disfarce", 50], ["Dirigir", 40], ["Armas de Fogo", 40],
+      ["Língua Estrangeira", 50], ["Língua Estrangeira", 40], ["HUMINT", 60], ["Persuadir", 60], ["SIGINT", 40], ["Furtividade", 50], ["Combate Desarmado", 50],
+    ],
+    chooseGroups: [],
+  },
+  {
+    name: "Advogado ou Executivo",
+    recommended: ["INT", "CHA"],
+    bonds: 4,
+    fixed: [
+      ["Contabilidade", 50], ["Burocracia", 50], ["HUMINT", 40], ["Persuadir", 60],
+    ],
+    chooseGroups: [
+      { n: 4, options: [["Ciência da Computação", 50], ["Criminologia", 60], ["Língua Estrangeira", 50], ["Direito", 50], ["Farmácia", 50]] },
+    ],
+  },
+  {
+    name: "Especialista em Mídia",
+    recommended: ["INT", "CHA"],
+    bonds: 4,
+    fixed: [
+      ["Arte (Escrita Criativa/Jornalismo)", 60], ["História", 40], ["HUMINT", 40], ["Persuadir", 50],
+    ],
+    chooseGroups: [
+      { n: 5, options: [["Antropologia", 40], ["Arqueologia", 40], ["Arte", 40], ["Burocracia", 50], ["Ciência da Computação", 40], ["Criminologia", 50], ["Língua Estrangeira", 40], ["Direito", 40], ["Ciência Militar", 40], ["Ocultismo", 50], ["Ciência", 40]] },
+    ],
+  },
+  {
+    name: "Enfermeiro ou Paramédico",
+    recommended: ["INT", "POW", "CHA"],
+    bonds: 4,
+    fixed: [
+      ["Prontidão", 40], ["Burocracia", 40], ["Primeiros Socorros", 60], ["HUMINT", 40],
+      ["Medicina", 40], ["Persuadir", 40], ["Farmácia", 40], ["Ciência (Biologia)", 40],
+    ],
+    chooseGroups: [
+      { n: 2, options: [["Dirigir", 60], ["Perícia Forense", 40], ["Navegar", 50], ["Psicoterapia", 50], ["Procurar", 60]] },
+    ],
+  },
+  {
+    name: "Piloto ou Marinheiro",
+    recommended: ["DEX", "INT"],
+    bonds: 3,
+    fixed: [
+      ["Prontidão", 60], ["Burocracia", 30], ["Ofício (Eletricista)", 40], ["Ofício (Mecânico)", 40],
+      ["Navegar", 50], ["Piloto", 60], ["Ciência (Meteorologia)", 40], ["Nadar", 40],
+    ],
+    chooseGroups: [
+      { n: 2, options: [["Língua Estrangeira", 50], ["Piloto", 50], ["Armas Pesadas", 50], ["Ciência Militar", 50]] },
+    ],
+  },
+  {
+    name: "Policial",
+    recommended: ["STR", "CON", "POW"],
+    bonds: 3,
+    fixed: [
+      ["Prontidão", 60], ["Burocracia", 40], ["Criminologia", 40], ["Dirigir", 50], ["Armas de Fogo", 40],
+      ["Primeiros Socorros", 30], ["HUMINT", 50], ["Direito", 30], ["Armas Corpo a Corpo", 50], ["Navegar", 40],
+      ["Persuadir", 40], ["Procurar", 40], ["Combate Desarmado", 60],
+    ],
+    chooseGroups: [
+      { n: 1, options: [["Perícia Forense", 50], ["Maquinário Pesado", 60], ["Armas Pesadas", 50], ["Montaria", 60]] },
+    ],
+  },
+  {
+    name: "Gerente de Programa",
+    recommended: ["INT", "CHA"],
+    bonds: 4,
+    fixed: [
+      ["Contabilidade", 60], ["Burocracia", 60], ["Ciência da Computação", 50], ["Criminologia", 30],
+      ["Língua Estrangeira", 50], ["História", 40], ["Direito", 40], ["Persuadir", 50],
+    ],
+    chooseGroups: [
+      { n: 1, options: [["Antropologia", 30], ["Arte", 30], ["Ofício", 30], ["Ciência", 30]] },
+    ],
+  },
+  {
+    name: "Soldado ou Fuzileiro",
+    recommended: ["STR", "CON"],
+    bonds: 3,
+    fixed: [
+      ["Prontidão", 50], ["Atletismo", 50], ["Burocracia", 30], ["Dirigir", 40], ["Armas de Fogo", 40],
+      ["Primeiros Socorros", 40], ["Ciência Militar (Terrestre)", 40], ["Navegar", 40], ["Persuadir", 30], ["Combate Desarmado", 50],
+    ],
+    chooseGroups: [
+      { n: 3, options: [["Artilharia", 40], ["Ciência da Computação", 40], ["Ofício", 40], ["Demolição", 40], ["Língua Estrangeira", 40], ["Maquinário Pesado", 50], ["Armas Pesadas", 40], ["Procurar", 60], ["SIGINT", 40], ["Nadar", 60]] },
+    ],
+  },
+  {
+    name: "Personalizada (definir manualmente)",
+    recommended: [],
+    bonds: 3,
+    fixed: [],
+    chooseGroups: [],
+    custom: true,
+  },
+];
+
+
+// ============ AUTENTICAÇÃO (LOGIN SIMPLES) ============
+const MASTER_PASSWORD = "SCP1151";
+
+let auth = {
+  role: localStorage.getItem("dg_role") || null, // 'jogador' | 'mestre'
+  nick: localStorage.getItem("dg_nick") || "",
+};
+
+async function loginAsPlayer(nick, password) {
+  nick = (nick || "").trim();
+  password = password || "";
+  if (!nick) { toast("Digite um apelido.", true); return; }
+  if (!password) { toast("Digite uma senha.", true); return; }
+  try {
+    const ok = await sbFetch("rpc/player_login", {
+      method: "POST",
+      body: JSON.stringify({ p_nick: nick, p_password: password }),
+    });
+    if (!ok) { toast("Senha incorreta para esse apelido.", true); return; }
+    auth.role = "jogador";
+    auth.nick = nick;
+    localStorage.setItem("dg_role", "jogador");
+    localStorage.setItem("dg_nick", nick);
+    enterApp();
+  } catch (e) {
+    toast("Erro ao entrar: " + e.message, true);
+  }
+}
+
+function loginAsMaster(password) {
+  if (password !== MASTER_PASSWORD) { toast("Senha incorreta.", true); return; }
+  auth.role = "mestre";
+  auth.nick = "mestre";
+  localStorage.setItem("dg_role", "mestre");
+  localStorage.setItem("dg_nick", "mestre");
+  enterApp();
+}
+
+function logout() {
+  localStorage.removeItem("dg_role");
+  localStorage.removeItem("dg_nick");
+  auth = { role: null, nick: "" };
+  location.reload();
+}
+
+function enterApp() {
+  document.getElementById("login-gate").style.display = "none";
+  document.getElementById("app-shell").style.display = "block";
+  document.getElementById("role-badge").textContent = auth.role === "mestre" ? `Mestre` : `Jogador: ${auth.nick}`;
+  document.querySelectorAll(".tab[data-role=mestre]").forEach(el => {
+    el.style.display = auth.role === "mestre" ? "" : "none";
+  });
+  renderAll();
+}
+
+// ============ ESTADO ============
+const SPECIALIZABLE = ["Língua Estrangeira", "Ciência", "Ofício", "Arte", "Ciência Militar", "Piloto"];
+
+let state = {
+  id: null,
+  name: "", profession: "", nationality: "", age: "", sex: "", employer: "Delta Green (encoberto)", education: "", appearance: "",
+  stats: { STR: 10, CON: 10, DEX: 10, INT: 10, POW: 10, CHA: 10 },
+  skills: {}, // nomeExibido -> valor
+  specialized: [], // [{group, label, value}] -- Língua Estrangeira, Ciência, Ofício, Arte, Ciência Militar, Piloto
+  bondsList: [], // [{name, value}]
+  bondsCount: 3,
+  bonusPoints: 8, // pontos de bônus disponíveis (cada um = +20%)
+  bonusSpent: {}, // nomeExibido -> quantidade de pontos gastos
+  whyTrusted: "", whyAccepted: "",
+  weapons: [],
+  notes: "",
+  sessionChecks: {}, // usado na aba de progressão
+};
+
+function resetSkillsToBase() {
+  state.skills = {};
+  SKILL_BASE.forEach(([name, val]) => { state.skills[name] = val; });
+}
+resetSkillsToBase();
+
+function pointsBuyTotal() {
+  return Object.values(state.stats).reduce((a, b) => a + Number(b || 0), 0);
+}
+
+function computeDerived() {
+  const { STR, CON, POW } = state.stats;
+  const HP = Math.ceil((Number(STR) + Number(CON)) / 2);
+  const WP = Number(POW);
+  const SAN = Number(POW) * 5;
+  const unnatural = state.skills["Sobrenatural"] || 0;
+  const sanCap = 99 - unnatural;
+  const sanClamped = Math.min(SAN, sanCap);
+  const BP = sanClamped - Number(POW);
+  return { HP, WP, SAN: sanClamped, BP, sanCap };
+}
+
+// ============ APLICAR PROFISSÃO ============
+function applyProfession(profName) {
+  const prof = PROFESSIONS.find(p => p.name === profName);
+  state.profession = profName;
+  state.selectedProf = prof ? {
+    ...prof,
+    chooseGroups: (prof.chooseGroups || []).map(g => ({ ...g, options: g.options, picked: [] })),
+  } : null;
+  resetSkillsToBase();
+  state.bonusSpent = {};
+  state.specialized = [];
+  if (!prof || prof.custom) {
+    state.bondsCount = 3;
+    renderAll();
+    return;
+  }
+  prof.fixed.forEach(([name, val]) => {
+    const baseName = name.split(" (")[0];
+    if (SPECIALIZABLE.includes(baseName)) {
+      const presetLabel = name.includes("(") ? name.match(/\(([^)]+)\)/)[1] : "";
+      state.specialized.push({ group: baseName, label: presetLabel, value: val });
+    } else {
+      if (!(baseName in state.skills)) state.skills[baseName] = 0;
+      state.skills[baseName] = Math.max(state.skills[baseName], val);
+    }
+  });
+  state.bondsCount = prof.bonds;
+  syncBonds();
+  renderAll();
+}
+
+function syncBonds() {
+  const current = state.bondsList.length;
+  const target = state.bondsCount;
+  if (current < target) {
+    for (let i = current; i < target; i++) state.bondsList.push({ name: "", value: Number(state.stats.CHA) });
+  } else if (current > target) {
+    state.bondsList = state.bondsList.slice(0, target);
+  }
+}
+
+function updateBondValues() {
+  state.bondsList.forEach(b => { if (!b.locked) b.value = Number(state.stats.CHA); });
+}
+
+// ============ BÔNUS DE PERÍCIA (8 pontos, +20% cada, teto 80% na criação) ============
+function bonusSpentTotal() {
+  return Object.values(state.bonusSpent).reduce((a, b) => a + b, 0);
+}
+function skillFinalValue(name) {
+  const base = state.skills[name] ?? 0;
+  const bonus = (state.bonusSpent[name] || 0) * 20;
+  return base + bonus;
+}
+function canAddBonus(name) {
+  if (name === "Sobrenatural") return false;
+  if (bonusSpentTotal() >= state.bonusPoints) return false;
+  if (skillFinalValue(name) + 20 > 80) return false;
+  return true;
+}
+function addBonus(name) {
+  if (!canAddBonus(name)) return;
+  state.bonusSpent[name] = (state.bonusSpent[name] || 0) + 1;
+  renderSkills();
+  renderDerived();
+  renderSummary();
+}
+function removeBonus(name) {
+  if (!state.bonusSpent[name]) return;
+  state.bonusSpent[name] -= 1;
+  if (state.bonusSpent[name] <= 0) delete state.bonusSpent[name];
+  renderSkills();
+  renderDerived();
+  renderSummary();
+}
+
+// ============ SUPABASE ============
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+    ...opts,
+    headers: {
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": "application/json",
+      "Prefer": opts.prefer || "return=representation",
+      ...(opts.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Erro Supabase (${res.status}): ${t}`);
+  }
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function buildPayload() {
+  const derived = computeDerived();
+  const allSkills = {};
+  SKILL_BASE.forEach(([name]) => { allSkills[name] = skillFinalValue(name); });
+  state.specialized.forEach(s => {
+    const key = `${s.group} (${s.label || "?"})`;
+    allSkills[key] = s.value;
+  });
+  if (!state.live) state.live = {};
+  if (state.live.hp === undefined) state.live.hp = derived.HP;
+  if (state.live.wp === undefined) state.live.wp = derived.WP;
+  if (state.live.san === undefined) state.live.san = derived.SAN;
+  return {
+    name: state.name, profession: state.profession, nationality: state.nationality,
+    age: state.age, sex: state.sex, employer: state.employer, education: state.education,
+    appearance: state.appearance,
+    stats: state.stats,
+    derived,
+    skills: allSkills,
+    bonds: state.bondsList,
+    why_trusted: state.whyTrusted, why_accepted: state.whyAccepted,
+    weapons: state.weapons,
+    notes: state.notes,
+    live: state.live,
+    owner_nick: state.id ? undefined : auth.nick, // só define o dono na criação, nunca sobrescreve depois
+  };
+}
+
+function stripUndefined(obj) {
+  const o = { ...obj };
+  Object.keys(o).forEach(k => { if (o[k] === undefined) delete o[k]; });
+  return o;
+}
+
+async function saveCharacter() {
+  const payload = stripUndefined(buildPayload());
+  try {
+    if (state.id) {
+      payload.updated_at = new Date().toISOString();
+      await sbFetch(`characters?id=eq.${state.id}`, { method: "PATCH", body: JSON.stringify(payload) });
+      toast("Ficha atualizada.");
+    } else {
+      const rows = await sbFetch("characters", { method: "POST", body: JSON.stringify(payload) });
+      state.id = rows[0].id;
+      toast("Ficha salva.");
+    }
+    loadCharacterList();
+  } catch (e) {
+    toast("Erro ao salvar: " + e.message, true);
+  }
+}
+
+async function loadCharacterList() {
+  const list = document.getElementById("char-list");
+  list.innerHTML = `<div class="muted">Carregando...</div>`;
+  try {
+    const filter = auth.role === "jogador" ? `&owner_nick=eq.${encodeURIComponent(auth.nick)}` : "";
+    const rows = await sbFetch(`characters?select=id,name,profession,owner_nick,updated_at&order=updated_at.desc${filter}`);
+    if (!rows.length) { list.innerHTML = `<div class="muted">Nenhuma ficha salva ainda.</div>`; return; }
+    list.innerHTML = rows.map(r => `
+      <div class="char-row" data-id="${r.id}">
+        <div>
+          <strong>${escapeHtml(r.name || "(sem nome)")}</strong>
+          <span class="muted"> — ${escapeHtml(r.profession || "sem profissão")}</span>
+          ${auth.role === "mestre" && r.owner_nick ? `<span class="muted small"> (jogador: ${escapeHtml(r.owner_nick)})</span>` : ""}
+        </div>
+        <div class="char-row-actions">
+          <button class="btn-small" data-action="load" data-id="${r.id}">Abrir</button>
+          <button class="btn-small btn-danger" data-action="delete" data-id="${r.id}">Excluir</button>
+        </div>
+      </div>
+    `).join("");
+  } catch (e) {
+    list.innerHTML = `<div class="muted">Erro ao carregar: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function loadCharacterInto(id) {
+  try {
+    const rows = await sbFetch(`characters?id=eq.${id}&select=*`);
+    if (!rows.length) return;
+    const r = rows[0];
+    state.id = r.id;
+    state.name = r.name || ""; state.profession = r.profession || ""; state.nationality = r.nationality || "";
+    state.age = r.age || ""; state.sex = r.sex || ""; state.employer = r.employer || ""; state.education = r.education || "";
+    state.appearance = r.appearance || "";
+    state.stats = r.stats && Object.keys(r.stats).length ? r.stats : state.stats;
+    state.skills = r.skills && Object.keys(r.skills).length ? r.skills : (resetSkillsToBase(), state.skills);
+    state.bondsList = r.bonds || [];
+    state.bondsCount = state.bondsList.length || 3;
+    state.whyTrusted = r.why_trusted || ""; state.whyAccepted = r.why_accepted || "";
+    state.weapons = r.weapons || []; state.notes = r.notes || "";
+    state.live = r.live && Object.keys(r.live).length ? r.live : {};
+    state.bonusSpent = {};
+    const loadedProf = PROFESSIONS.find(p => p.name === state.profession) || null;
+    state.selectedProf = loadedProf ? {
+      ...loadedProf,
+      chooseGroups: (loadedProf.chooseGroups || []).map(g => ({ ...g, picked: [] })),
+    } : null;
+    switchTab("criar");
+    renderAll();
+    toast("Ficha carregada.");
+  } catch (e) {
+    toast("Erro ao carregar ficha: " + e.message, true);
+  }
+}
+
+async function deleteCharacter(id) {
+  if (!confirm("Excluir esta ficha permanentemente?")) return;
+  try {
+    await sbFetch(`characters?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
+    toast("Ficha excluída.");
+    loadCharacterList();
+  } catch (e) {
+    toast("Erro ao excluir: " + e.message, true);
+  }
+}
+
+async function saveLiveState() {
+  if (!state.id) { toast("Salve a ficha completa pelo menos uma vez antes.", true); return; }
+  try {
+    await sbFetch(`characters?id=eq.${state.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ live: state.live, updated_at: new Date().toISOString() }),
+    });
+    toast("Estado atual salvo.");
+  } catch (e) {
+    toast("Erro ao salvar estado: " + e.message, true);
+  }
+}
+
+function adjustLive(field, delta) {
+  const d = computeDerived();
+  const maxMap = { hp: d.HP, wp: d.WP, san: d.SAN };
+  if (!state.live) state.live = {};
+  if (state.live[field] === undefined) state.live[field] = maxMap[field];
+  state.live[field] = Math.max(0, Math.min(maxMap[field], state.live[field] + delta));
+  renderLive();
+}
+
+// ============ MESTRE (PAINEL EM TEMPO REAL) ============
+let masterPollTimer = null;
+
+async function loadMasterView() {
+  const el = document.getElementById("master-list");
+  try {
+    const rows = await sbFetch("characters?select=id,name,profession,stats,derived,live,bonds,updated_at&order=name.asc");
+    if (!rows.length) { el.innerHTML = `<p class="muted">Nenhuma ficha salva ainda.</p>`; return; }
+    el.innerHTML = rows.map(r => renderMasterCard(r)).join("");
+  } catch (e) {
+    el.innerHTML = `<p class="muted">Erro ao carregar: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderMasterCard(r) {
+  const d = r.derived || {};
+  const live = r.live || {};
+  const hp = live.hp ?? d.HP ?? 0, hpMax = d.HP ?? 0;
+  const wp = live.wp ?? d.WP ?? 0, wpMax = d.WP ?? 0;
+  const san = live.san ?? d.SAN ?? 0, sanMax = d.SAN ?? 0;
+  const bp = d.BP ?? 0;
+  const sanDanger = san <= bp;
+  const hpDanger = hp <= Math.ceil(hpMax / 2) && hpMax > 0;
+  const ago = timeAgo(r.updated_at);
+  const bonds = (r.bonds || []).map(b => `${escapeHtml(b.name || "?")} (${b.value})`).join(" · ");
+  return `
+    <div class="master-card ${sanDanger ? 'danger' : ''}">
+      <div class="master-card-head">
+        <strong>${escapeHtml(r.name || "(sem nome)")}</strong>
+        <span class="muted small">${escapeHtml(r.profession || "")}</span>
+        <span class="muted small master-ago">atualizado ${ago}</span>
+      </div>
+      <div class="master-bars">
+        <div class="bar-item ${hpDanger ? 'warn' : ''}"><span>PV</span><strong>${hp}/${hpMax}</strong></div>
+        <div class="bar-item"><span>WP</span><strong>${wp}/${wpMax}</strong></div>
+        <div class="bar-item ${sanDanger ? 'warn' : ''}"><span>SAN</span><strong>${san}/${sanMax}</strong></div>
+        <div class="bar-item"><span>BP</span><strong>${bp}</strong></div>
+      </div>
+      ${bonds ? `<div class="master-bonds small muted">Vínculos: ${bonds}</div>` : ""}
+      ${sanDanger ? `<div class="master-warning">⚠ SAN no Breaking Point ou abaixo — risco de transtorno</div>` : ""}
+    </div>
+  `;
+}
+
+function timeAgo(iso) {
+  if (!iso) return "";
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 10) return "agora";
+  if (diff < 60) return `há ${Math.floor(diff)}s`;
+  if (diff < 3600) return `há ${Math.floor(diff / 60)}min`;
+  return `há ${Math.floor(diff / 3600)}h`;
+}
+
+function startMasterPolling() {
+  stopMasterPolling();
+  loadMasterView();
+  masterPollTimer = setInterval(loadMasterView, 4000);
+}
+function stopMasterPolling() {
+  if (masterPollTimer) clearInterval(masterPollTimer);
+  masterPollTimer = null;
+}
+
+async function loadProgressionList() {
+  const sel = document.getElementById("prog-select");
+  sel.innerHTML = `<option value="">Selecione uma ficha...</option>`;
+  try {
+    const filter = auth.role === "jogador" ? `&owner_nick=eq.${encodeURIComponent(auth.nick)}` : "";
+    const rows = await sbFetch(`characters?select=id,name,profession&order=name.asc${filter}`);
+    rows.forEach(r => {
+      const opt = document.createElement("option");
+      opt.value = r.id;
+      opt.textContent = `${r.name || "(sem nome)"} — ${r.profession || ""}`;
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    toast("Erro ao carregar lista: " + e.message, true);
+  }
+}
+
+let progCharacter = null;
+
+async function loadProgressionCharacter(id) {
+  const box = document.getElementById("prog-skills");
+  if (!id) { box.innerHTML = ""; progCharacter = null; return; }
+  const rows = await sbFetch(`characters?id=eq.${id}&select=*`);
+  progCharacter = rows[0];
+  const skills = progCharacter.skills || {};
+  box.innerHTML = `
+    <p class="muted">Marque as perícias que o agente <strong>tentou usar e falhou</strong> durante a sessão. No fim, role 1D4−1 pra cada uma.</p>
+    <div class="skill-grid">
+      ${Object.entries(skills).filter(([n]) => n !== "Sobrenatural" || skills[n] > 0).map(([name, val]) => `
+        <label class="skill-check">
+          <input type="checkbox" data-skill="${escapeHtml(name)}">
+          <span>${escapeHtml(name)}</span>
+          <span class="skill-val">${val}%</span>
+        </label>
+      `).join("")}
+    </div>
+    <button id="apply-session-btn" class="btn-primary">Aplicar fim de sessão</button>
+    <div id="session-results"></div>
+  `;
+}
+
+function applySessionRoll() {
+  if (!progCharacter) return;
+  const checks = [...document.querySelectorAll('#prog-skills input[type=checkbox]:checked')].map(el => el.dataset.skill);
+  if (!checks.length) { toast("Nenhuma perícia marcada.", true); return; }
+  const skills = { ...progCharacter.skills };
+  const results = checks.map(name => {
+    const roll = Math.floor(Math.random() * 4) + 1;
+    const gain = roll - 1;
+    const before = skills[name] || 0;
+    const after = Math.min(before + gain, 99);
+    skills[name] = after;
+    return { name, roll, gain, before, after };
+  });
+  const resBox = document.getElementById("session-results");
+  resBox.innerHTML = `
+    <table class="result-table">
+      <thead><tr><th>Perícia</th><th>Antes</th><th>1D4</th><th>Ganho</th><th>Depois</th></tr></thead>
+      <tbody>
+        ${results.map(r => `<tr><td>${escapeHtml(r.name)}</td><td>${r.before}%</td><td>${r.roll}</td><td>+${r.gain}%</td><td><strong>${r.after}%</strong></td></tr>`).join("")}
+      </tbody>
+    </table>
+    <button id="save-session-btn" class="btn-primary">Salvar resultado na ficha</button>
+  `;
+  progCharacter._pendingSkills = skills;
+}
+
+async function saveSessionResult() {
+  if (!progCharacter || !progCharacter._pendingSkills) return;
+  try {
+    await sbFetch(`characters?id=eq.${progCharacter.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ skills: progCharacter._pendingSkills, updated_at: new Date().toISOString() }),
+    });
+    toast("Progressão salva na ficha.");
+    loadProgressionCharacter(progCharacter.id);
+  } catch (e) {
+    toast("Erro ao salvar progressão: " + e.message, true);
+  }
+}
+
+// ============ HELPERS ============
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+function toast(msg, isError = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (isError ? " error" : "");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.className = "toast"; }, 3500);
+}
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(el => el.classList.toggle("active", el.dataset.tab === tab));
+  document.querySelectorAll(".tab-panel").forEach(el => el.classList.toggle("active", el.id === "panel-" + tab));
+  if (tab === "fichas") loadCharacterList();
+  if (tab === "progressao") loadProgressionList();
+  if (tab === "mestre") startMasterPolling(); else stopMasterPolling();
+}
+
+
+// ============ RENDERIZAÇÃO ============
+
+function renderAll() {
+  renderPersonal();
+  renderStats();
+  renderDerived();
+  renderLive();
+  renderProfessionSelect();
+  renderChooseGroups();
+  renderSkills();
+  renderSpecialized();
+  renderBonds();
+  renderMotivations();
+  renderSummary();
+}
+
+function renderPersonal() {
+  const el = document.getElementById("panel-personal");
+  el.innerHTML = `
+    <div class="field-grid">
+      <label>Nome<input type="text" id="f-name" value="${escapeHtml(state.name)}"></label>
+      <label>Nacionalidade<input type="text" id="f-nationality" value="${escapeHtml(state.nationality)}"></label>
+      <label>Idade<input type="text" id="f-age" value="${escapeHtml(state.age)}"></label>
+      <label>Sexo<input type="text" id="f-sex" value="${escapeHtml(state.sex)}" placeholder="F / M / outro"></label>
+      <label>Empregador<input type="text" id="f-employer" value="${escapeHtml(state.employer)}"></label>
+      <label>Educação / histórico ocupacional<input type="text" id="f-education" value="${escapeHtml(state.education)}"></label>
+    </div>
+    <label>Descrição física<textarea id="f-appearance" rows="2">${escapeHtml(state.appearance)}</textarea></label>
+  `;
+  bindInput("f-name", v => state.name = v);
+  bindInput("f-nationality", v => state.nationality = v);
+  bindInput("f-age", v => state.age = v);
+  bindInput("f-sex", v => state.sex = v);
+  bindInput("f-employer", v => state.employer = v);
+  bindInput("f-education", v => state.education = v);
+  bindInput("f-appearance", v => state.appearance = v);
+}
+
+function bindInput(id, setter) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener("input", () => setter(el.value));
+}
+
+function renderStats() {
+  const el = document.getElementById("panel-stats");
+  const total = pointsBuyTotal();
+  el.innerHTML = `
+    <div class="stats-header">
+      <span>Distribua os atributos (referência: 72 pontos no total)</span>
+      <span class="points-total ${total > 72 ? 'over' : ''}">${total} / 72</span>
+    </div>
+    <div class="stat-grid">
+      ${STAT_NAMES.map(([code, label]) => `
+        <label class="stat-field">
+          <span>${label} (${code})</span>
+          <input type="number" min="3" max="18" id="stat-${code}" value="${state.stats[code]}">
+        </label>
+      `).join("")}
+    </div>
+  `;
+  STAT_NAMES.forEach(([code]) => {
+    document.getElementById(`stat-${code}`).addEventListener("input", (e) => {
+      state.stats[code] = Number(e.target.value || 0);
+      renderStats();
+      renderDerived();
+      updateBondValues();
+      renderBonds();
+    });
+  });
+}
+
+function renderDerived() {
+  const el = document.getElementById("panel-derived");
+  const d = computeDerived();
+  el.innerHTML = `
+    <div class="derived-grid">
+      <div class="derived-box"><span>PV (HP)</span><strong>${d.HP}</strong></div>
+      <div class="derived-box"><span>Vontade (WP)</span><strong>${d.WP}</strong></div>
+      <div class="derived-box"><span>Sanidade (SAN)</span><strong>${d.SAN}</strong></div>
+      <div class="derived-box"><span>Breaking Point</span><strong>${d.BP}</strong></div>
+    </div>
+    <div class="muted small">Teto de SAN = 99 − Sobrenatural (${state.skills["Sobrenatural"] || 0}%) = ${d.sanCap}</div>
+  `;
+}
+
+function renderLive() {
+  const el = document.getElementById("panel-live");
+  if (!el) return;
+  const d = computeDerived();
+  if (!state.live) state.live = {};
+  const hp = state.live.hp ?? d.HP;
+  const wp = state.live.wp ?? d.WP;
+  const san = state.live.san ?? d.SAN;
+  el.innerHTML = `
+    <p class="muted small">Valores atuais durante a sessão (o mestre acompanha isso na aba "Mestre" em tempo real).</p>
+    <div class="live-grid">
+      ${[["hp", "PV", hp, d.HP], ["wp", "WP", wp, d.WP], ["san", "SAN", san, d.SAN]].map(([field, label, val, max]) => `
+        <div class="live-item">
+          <span>${label}</span>
+          <button class="btn-tiny" data-field="${field}" data-delta="-1">−</button>
+          <strong>${val} / ${max}</strong>
+          <button class="btn-tiny" data-field="${field}" data-delta="1">+</button>
+        </div>
+      `).join("")}
+    </div>
+    <button class="btn-small" id="save-live-btn">Salvar estado atual</button>
+  `;
+  el.querySelectorAll("button[data-field]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      adjustLive(btn.dataset.field, Number(btn.dataset.delta));
+    });
+  });
+  const saveBtn = document.getElementById("save-live-btn");
+  if (saveBtn) saveBtn.addEventListener("click", saveLiveState);
+}
+
+function renderProfessionSelect() {
+  const el = document.getElementById("panel-profession");
+  el.innerHTML = `
+    <label>Profissão
+      <select id="f-profession">
+        <option value="">— escolher —</option>
+        ${PROFESSIONS.map(p => `<option value="${escapeHtml(p.name)}" ${state.profession === p.name ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}
+      </select>
+    </label>
+    <div id="prof-info" class="muted small"></div>
+  `;
+  document.getElementById("f-profession").addEventListener("change", (e) => {
+    applyProfession(e.target.value);
+  });
+  const prof = PROFESSIONS.find(p => p.name === state.profession);
+  if (prof) {
+    document.getElementById("prof-info").innerHTML = prof.recommended.length
+      ? `Atributos recomendados: <strong>${prof.recommended.join(", ")}</strong> · Bonds: <strong>${prof.bonds}</strong>`
+      : `Defina perícias e Bonds manualmente.`;
+  }
+}
+
+function renderChooseGroups() {
+  const el = document.getElementById("panel-choose");
+  const prof = state.selectedProf;
+  if (!prof || !prof.chooseGroups || !prof.chooseGroups.length) { el.innerHTML = ""; return; }
+  el.innerHTML = prof.chooseGroups.map((g, gi) => `
+    <div class="choose-group">
+      <div class="choose-title">Escolha ${g.n} entre:</div>
+      <div class="choose-options">
+        ${g.options.map(([name, val], oi) => `
+          <label class="choose-opt">
+            <input type="checkbox" data-gi="${gi}" data-oi="${oi}" ${g.picked.includes(oi) ? "checked" : ""}>
+            ${escapeHtml(name)} ${val}%
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `).join("");
+  el.querySelectorAll("input[type=checkbox]").forEach(cb => {
+    cb.addEventListener("change", (e) => {
+      const gi = Number(e.target.dataset.gi), oi = Number(e.target.dataset.oi);
+      const g = state.selectedProf.chooseGroups[gi];
+      if (e.target.checked) {
+        if (g.picked.length >= g.n) { e.target.checked = false; toast(`Só pode escolher ${g.n}.`, true); return; }
+        g.picked.push(oi);
+        const [name, val] = g.options[oi];
+        const baseName = name.split(" (")[0];
+        if (SPECIALIZABLE.includes(baseName)) {
+          const presetLabel = name.includes("(") ? name.match(/\(([^)]+)\)/)[1] : "";
+          state.specialized.push({ group: baseName, label: presetLabel, value: val, _fromChoice: [gi, oi] });
+        } else {
+          state.skills[baseName] = Math.max(state.skills[baseName] || 0, val);
+        }
+      } else {
+        g.picked = g.picked.filter(x => x !== oi);
+        state.specialized = state.specialized.filter(s => !(s._fromChoice && s._fromChoice[0] === gi && s._fromChoice[1] === oi));
+      }
+      renderSkills();
+      renderSpecialized();
+      renderDerived();
+      renderSummary();
+    });
+  });
+}
+
+function renderSkills() {
+  const el = document.getElementById("panel-skills");
+  const spent = bonusSpentTotal();
+  el.innerHTML = `
+    <div class="skills-header">
+      <span>Perícias</span>
+      <span class="points-total ${spent > state.bonusPoints ? 'over' : ''}">Bônus usados: ${spent} / ${state.bonusPoints}</span>
+    </div>
+    <div class="skills-table">
+      ${SKILL_BASE.map(([name]) => {
+        const base = state.skills[name] ?? 0;
+        const bonus = state.bonusSpent[name] || 0;
+        const final = skillFinalValue(name);
+        const disabled = name === "Sobrenatural";
+        return `
+        <div class="skill-row ${disabled ? 'disabled' : ''}">
+          <span class="skill-name">${escapeHtml(name)}</span>
+          <span class="skill-base">${base}%</span>
+          <span class="skill-bonus">${bonus > 0 ? "+" + bonus * 20 + "%" : ""}</span>
+          <span class="skill-final">${final}%</span>
+          ${disabled ? "" : `
+            <button class="btn-tiny" data-act="minus" data-name="${escapeHtml(name)}">−</button>
+            <button class="btn-tiny" data-act="plus" data-name="${escapeHtml(name)}">+</button>
+          `}
+        </div>`;
+      }).join("")}
+    </div>
+  `;
+  el.querySelectorAll("button[data-act]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const name = btn.dataset.name;
+      if (btn.dataset.act === "plus") addBonus(name); else removeBonus(name);
+    });
+  });
+}
+
+function renderSpecialized() {
+  const el = document.getElementById("panel-specialized");
+  if (!el) return;
+  if (!state.specialized.length) { el.innerHTML = `<p class="muted small">Nenhuma perícia especializada ainda (aparecem aqui idiomas, ciências, ofícios, etc. conforme a profissão).</p>`; return; }
+  el.innerHTML = `
+    <div class="skills-table">
+      ${state.specialized.map((s, i) => `
+        <div class="skill-row specialized-row">
+          <select class="spec-group" data-i="${i}">
+            ${SPECIALIZABLE.map(g => `<option value="${g}" ${g === s.group ? "selected" : ""}>${g}</option>`).join("")}
+          </select>
+          <input type="text" class="spec-label" data-i="${i}" placeholder="especificar (ex: Russo, Física...)" value="${escapeHtml(s.label)}">
+          <input type="number" class="spec-value" data-i="${i}" value="${s.value}">
+          <button class="btn-tiny" data-i="${i}" data-act="remove-spec">×</button>
+        </div>
+      `).join("")}
+    </div>
+    <button class="btn-small" id="add-spec-btn">+ adicionar especialização</button>
+  `;
+  el.querySelectorAll(".spec-group").forEach(sel => {
+    sel.addEventListener("change", (e) => { state.specialized[e.target.dataset.i].group = e.target.value; });
+  });
+  el.querySelectorAll(".spec-label").forEach(inp => {
+    inp.addEventListener("input", (e) => { state.specialized[e.target.dataset.i].label = e.target.value; });
+  });
+  el.querySelectorAll(".spec-value").forEach(inp => {
+    inp.addEventListener("input", (e) => { state.specialized[e.target.dataset.i].value = Number(e.target.value); });
+  });
+  el.querySelectorAll("button[data-act=remove-spec]").forEach(btn => {
+    btn.addEventListener("click", (e) => { state.specialized.splice(Number(e.target.dataset.i), 1); renderSpecialized(); });
+  });
+  const addBtn = document.getElementById("add-spec-btn");
+  if (addBtn) addBtn.addEventListener("click", () => {
+    state.specialized.push({ group: "Língua Estrangeira", label: "", value: 0 });
+    renderSpecialized();
+  });
+}
+
+function renderBonds() {
+  const el = document.getElementById("panel-bonds");
+  el.innerHTML = `
+    <div class="bonds-header">
+      <span>Vínculos Pessoais (Bonds) — valor inicial = CHA (${state.stats.CHA})</span>
+    </div>
+    ${state.bondsList.map((b, i) => `
+      <div class="bond-row">
+        <input type="text" placeholder="Nome do vínculo" value="${escapeHtml(b.name)}" data-i="${i}" class="bond-name">
+        <input type="number" value="${b.value}" data-i="${i}" class="bond-value">
+      </div>
+    `).join("")}
+  `;
+  el.querySelectorAll(".bond-name").forEach(inp => {
+    inp.addEventListener("input", (e) => { state.bondsList[e.target.dataset.i].name = e.target.value; });
+  });
+  el.querySelectorAll(".bond-value").forEach(inp => {
+    inp.addEventListener("input", (e) => {
+      state.bondsList[e.target.dataset.i].value = Number(e.target.value);
+      state.bondsList[e.target.dataset.i].locked = true;
+    });
+  });
+}
+
+function renderMotivations() {
+  const el = document.getElementById("panel-motivations");
+  el.innerHTML = `
+    <label>Por que a Delta Green confia nele
+      <textarea id="f-trusted" rows="3">${escapeHtml(state.whyTrusted)}</textarea>
+    </label>
+    <label>Por que ele aceita o risco
+      <textarea id="f-accepted" rows="3">${escapeHtml(state.whyAccepted)}</textarea>
+    </label>
+    <label>Notas / equipamento
+      <textarea id="f-notes" rows="2">${escapeHtml(state.notes)}</textarea>
+    </label>
+  `;
+  bindInput("f-trusted", v => state.whyTrusted = v);
+  bindInput("f-accepted", v => state.whyAccepted = v);
+  bindInput("f-notes", v => state.notes = v);
+}
+
+function renderSummary() {
+  const el = document.getElementById("panel-summary");
+  const d = computeDerived();
+  el.innerHTML = `
+    <div class="summary-line"><strong>${escapeHtml(state.name || "(sem nome)")}</strong> — ${escapeHtml(state.profession || "sem profissão")}</div>
+    <div class="summary-line small muted">STR ${state.stats.STR} · CON ${state.stats.CON} · DEX ${state.stats.DEX} · INT ${state.stats.INT} · POW ${state.stats.POW} · CHA ${state.stats.CHA}</div>
+    <div class="summary-line small muted">HP ${d.HP} · WP ${d.WP} · SAN ${d.SAN} · BP ${d.BP}</div>
+  `;
+}
+
+</script>
+<script>
+  document.getElementById("char-list").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    const id = btn.dataset.id;
+    if (btn.dataset.action === "load") loadCharacterInto(id);
+    if (btn.dataset.action === "delete") deleteCharacter(id);
+  });
+  document.getElementById("prog-select").addEventListener("change", (e) => loadProgressionCharacter(e.target.value));
+  document.getElementById("panel-progressao").addEventListener("click", (e) => {
+    if (e.target.id === "apply-session-btn") applySessionRoll();
+    if (e.target.id === "save-session-btn") saveSessionResult();
+  });
+
+  document.getElementById("login-player-btn").addEventListener("click", () => {
+    loginAsPlayer(document.getElementById("login-nick").value, document.getElementById("login-nick-pass").value);
+  });
+  document.getElementById("login-master-btn").addEventListener("click", () => {
+    loginAsMaster(document.getElementById("login-master-pass").value);
+  });
+  document.getElementById("login-nick-pass").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") loginAsPlayer(document.getElementById("login-nick").value, e.target.value);
+  });
+  document.getElementById("login-master-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") loginAsMaster(e.target.value); });
+
+  // Auto-login se já houver sessão salva neste navegador
+  if (auth.role === "jogador" || auth.role === "mestre") {
+    enterApp();
+  }
+</script>
+
+</body>
+</html>
