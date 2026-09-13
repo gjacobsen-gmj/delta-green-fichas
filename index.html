@@ -317,7 +317,7 @@
 
 <div class="header">
   <h1>DELTA GREEN</h1>
-  <p>GERADO DE FICHAS DE AGENTE — USO RESTRITO</p>
+  <p>GERADOR DE FICHAS DE AGENTE — USO RESTRITO</p>
   <div class="role-bar">
     <span id="role-badge"></span>
     <button class="btn-small" onclick="logout()">Sair</button>
@@ -325,11 +325,12 @@
 </div>
 
 <div class="tabs">
-  <div class="tab active" data-tab="criar" onclick="switchTab('criar')">Criar Ficha</div>
-  <div class="tab" data-tab="fichas" onclick="switchTab('fichas')">Fichas Salvas</div>
-  <div class="tab" data-tab="progressao" onclick="switchTab('progressao')">Progressão (Fim de Sessão)</div>
+  <div class="tab active" data-tab="criar" data-role="jogador" onclick="switchTab('criar')">Criar Ficha</div>
+  <div class="tab" data-tab="fichas" data-role="jogador" onclick="switchTab('fichas')">Fichas Salvas</div>
+  <div class="tab" data-tab="progressao" data-role="jogador" onclick="switchTab('progressao')">Progressão (Fim de Sessão)</div>
   <div class="tab" data-tab="mestre" data-role="mestre" onclick="switchTab('mestre')">Mestre (Tempo Real)</div>
 </div>
+
 <div class="container">
 
   <div class="tab-panel active" id="panel-criar">
@@ -422,7 +423,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// ============= DADOS DO SISTEMA DELTA GREEN =============
+// ============ DADOS DO SISTEMA DELTA GREEN ============
 
 const SUPABASE_URL = "https://pdbwlcaqxaaswhbyuyge.supabase.co";
 const SUPABASE_KEY = "sb_publishable_yOlwRzeVot8upsE__kviiw_5xZ459vQ";
@@ -756,7 +757,14 @@ function enterApp() {
   document.querySelectorAll(".tab[data-role=mestre]").forEach(el => {
     el.style.display = auth.role === "mestre" ? "" : "none";
   });
-  renderAll();
+  document.querySelectorAll(".tab[data-role=jogador]").forEach(el => {
+    el.style.display = auth.role === "jogador" ? "" : "none";
+  });
+  if (auth.role === "mestre") {
+    switchTab("mestre");
+  } else {
+    renderAll();
+  }
 }
 
 // ============ ESTADO ============
