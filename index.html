@@ -23,12 +23,15 @@
     background: var(--paper-dark);
     background-image:
       radial-gradient(circle at 20% 10%, rgba(0,0,0,0.03), transparent 40%),
-      radial-gradient(circle at 80% 80%, rgba(0,0,0,0.04), transparent 45%);
+      radial-gradient(circle at 80% 80%, rgba(0,0,0,0.04), transparent 45%),
+      repeating-linear-gradient(135deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 7px);
     color: var(--ink);
     font-family: 'IBM Plex Sans', sans-serif;
     min-height: 100vh;
   }
   .header {
+    position: relative;
+    overflow: hidden;
     background: var(--black-bar);
     color: var(--paper);
     padding: 22px 24px 18px;
@@ -42,6 +45,22 @@
     font-size: 28px;
   }
   .header p { margin: 0; color: #b8b2a0; font-size: 13px; letter-spacing: 1px; }
+  .stamp {
+    position: absolute;
+    top: 14px;
+    right: 20px;
+    border: 3px double rgba(210,80,80,0.65);
+    color: rgba(214,90,90,0.75);
+    font-family: 'Special Elite', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 3px;
+    transform: rotate(-8deg);
+    pointer-events: none;
+  }
+  @media (max-width: 640px) { .stamp { display: none; } }
 
   .tabs {
     display: flex;
@@ -72,12 +91,36 @@
   .tab-panel.active { display: block; }
 
   .sheet {
+    position: relative;
     background: #fff;
     border: 1px solid var(--line);
     border-radius: 0 8px 8px 8px;
     padding: 24px;
     box-shadow: 0 6px 24px rgba(0,0,0,0.08);
   }
+  .sheet::after {
+    content: "";
+    position: absolute;
+    top: -6px; left: 18px; right: 18px; height: 6px;
+    background-image: radial-gradient(circle, var(--paper-dark) 3px, transparent 3.5px);
+    background-size: 14px 12px;
+    background-repeat: repeat-x;
+    background-position: left center;
+    pointer-events: none;
+  }
+  #panel-mestre .sheet::before, #panel-batalha .sheet::before {
+    content: "CONFIDENCIAL — USO EXCLUSIVO DO MESTRE";
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 40px;
+    font-family: 'Special Elite', monospace;
+    font-size: 42px; letter-spacing: 4px; line-height: 1.3;
+    color: rgba(125,32,32,0.055);
+    transform: rotate(-16deg);
+    pointer-events: none;
+    z-index: 0;
+  }
+  #panel-mestre .sheet > *, #panel-batalha .sheet > * { position: relative; z-index: 1; }
 
   .section {
     margin-bottom: 22px;
@@ -177,9 +220,16 @@
     display: grid; grid-template-columns: 1.3fr 1.2fr 0.9fr 1fr 0.8fr auto;
     gap: 6px; align-items: center; padding: 5px 8px; border-radius: 4px; font-size: 12.5px;
   }
-  .weapon-row:not(.weapon-head):nth-child(even) { background: var(--paper); }
   .weapon-row.weapon-head { font-weight: 700; color: var(--ink-soft); font-size: 11px; }
   .weapon-row select, .weapon-row input { font-size: 12.5px; padding: 4px 6px; margin: 0; }
+
+  .weapon-list { display: flex; flex-direction: column; gap: 6px; }
+  .weapon-card { background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; }
+  .weapon-card .weapon-row { padding: 0 0 6px; background: transparent; }
+  .weapon-extra-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  @media (max-width: 640px) { .weapon-extra-row { grid-template-columns: 1fr 1fr; } }
+  .weapon-extra-row label { font-size: 10.5px; color: var(--ink-soft); margin: 0; }
+  .weapon-extra-row input { font-size: 12px; padding: 4px 6px; margin-top: 2px; }
 
   .weapon-threshold-table { margin-top: 10px; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
   .weapon-threshold-row {
@@ -189,6 +239,15 @@
   .weapon-threshold-row:last-child { border-bottom: none; }
   .weapon-threshold-row:nth-child(even) { background: var(--paper); }
   .weapon-threshold-head { font-weight: 700; background: var(--black-bar) !important; color: #fff; }
+
+  .weapon-master-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .weapon-master-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+  .weapon-master-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+  .weapon-master-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--ink-soft); }
+  .weapon-master-stats b { color: var(--ink); font-weight: 600; }
+  .weapon-master-notes { margin-top: 5px; }
+  .weapon-master-thresholds { margin-top: 6px; font-family: 'IBM Plex Mono', monospace; color: var(--ink-soft); }
+  .weapon-master-thresholds strong { color: var(--ink); }
 
   .btn-primary {
     background: var(--red);
@@ -296,6 +355,7 @@
     padding: 20px;
   }
   .login-box {
+    position: relative;
     background: var(--paper);
     border-radius: 8px;
     padding: 32px;
@@ -338,12 +398,40 @@
   /* ===== SELETOR DE ARMAS DA LISTA ===== */
   .weapon-picker-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
   .weapon-picker-row select { flex: 1 1 260px; margin: 0; }
+
+  /* ===== ÁREA DE BATALHA (só o mestre) ===== */
+  .battle-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .battle-round-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: 'IBM Plex Mono', monospace; font-size: 13px; }
+
+  .battle-add-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+  @media (max-width: 760px) { .battle-add-grid { grid-template-columns: 1fr; } }
+  .battle-add-col { background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .battle-add-col label { margin-bottom: 0; }
+  .battle-add-col select, .battle-add-col input { margin-top: 4px; }
+  .battle-add-col .btn-small { align-self: flex-start; }
+
+  .battle-order-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .battle-combatant { border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; background: #fff; }
+  .battle-combatant.is-monster { border-left: 4px solid var(--red-bright); }
+  .battle-combatant.is-player { border-left: 4px solid #3a6b3a; }
+  .battle-combatant.active-turn { background: #fdf3d8; box-shadow: 0 0 0 2px var(--red) inset; }
+  .battle-combatant-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .battle-turn-marker { color: var(--red-bright); font-weight: 700; width: 14px; text-align: center; }
+  .battle-init { width: 58px; font-family: 'IBM Plex Mono', monospace; padding: 4px 6px; margin: 0; }
+  .battle-combatant-head strong { flex: 1; }
+  .battle-combatant-hp { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; flex-wrap: wrap; }
+  .battle-notes { margin-left: 6px; font-family: 'IBM Plex Sans', sans-serif; font-size: 12px; }
+
+  .monster-card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: var(--paper); }
+  .monster-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .monster-card-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 
 <div id="login-gate" class="login-gate">
   <div class="login-box">
+    <div class="stamp">Nível de Acesso</div>
     <h1 class="login-title">DELTA GREEN</h1>
     <p class="login-sub">GERADOR DE FICHAS — IDENTIFIQUE-SE</p>
 
@@ -368,6 +456,7 @@
 <div id="app-shell" style="display:none;">
 
 <div class="header">
+  <div class="stamp">Classificado</div>
   <h1>DELTA GREEN</h1>
   <p>GERADOR DE FICHAS DE AGENTE — USO RESTRITO</p>
   <div class="role-bar">
@@ -381,6 +470,7 @@
   <div class="tab" data-tab="fichas" data-role="jogador" onclick="switchTab('fichas')">Fichas Salvas</div>
   <div class="tab" data-tab="progressao" data-role="jogador" onclick="switchTab('progressao')">Progressão (Fim de Sessão)</div>
   <div class="tab" data-tab="mestre" data-role="mestre" onclick="switchTab('mestre')">Mestre (Tempo Real)</div>
+  <div class="tab" data-tab="batalha" data-role="mestre" onclick="switchTab('batalha')">Batalha</div>
 </div>
 
 <div class="container">
@@ -471,6 +561,34 @@
         <span class="muted small" id="master-status">atualizando automaticamente a cada 4s</span>
       </div>
       <div id="master-list"></div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-batalha">
+    <div class="sheet">
+      <div class="battle-header">
+        <div class="section-title">Ordem de Batalha</div>
+        <div class="battle-round-info">
+          <span>Rodada <strong id="battle-round-num">1</strong></span>
+          <button class="btn-small" id="battle-sort-btn">Ordenar por iniciativa</button>
+          <button class="btn-small" id="battle-prev-btn">◀ Turno anterior</button>
+          <button class="btn-small" id="battle-next-btn">Próximo turno ▶</button>
+          <button class="btn-small btn-danger" id="battle-reset-btn">Encerrar combate</button>
+        </div>
+      </div>
+
+      <div id="battle-add-row"></div>
+      <div id="battle-list"></div>
+
+      <div class="section" style="margin-top:26px;">
+        <div class="section-title">Criar Monstro / Inimigo</div>
+        <div id="monster-form"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Biblioteca de Monstros</div>
+        <div id="monster-library"></div>
+      </div>
     </div>
   </div>
 
@@ -766,37 +884,37 @@ const PROFESSIONS = [
 // Lista de armas de referência p/ o seletor rápido da seção 6b (valores de referência — ajustar com o mestre)
 const WEAPON_PRESETS = [
   { group: "Armas Curtas de Fogo", items: [
-    { name: "Pistola 9mm (ex: Glock 17)", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null },
-    { name: "Pistola .45 (ex: Colt 1911)", skill: "Armas de Fogo", damage: "1D10+2", damageType: "Balístico", lethality: null },
-    { name: "Revólver .38 Special", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null },
-    { name: "Revólver .44 Magnum", skill: "Armas de Fogo", damage: "1D12+2", damageType: "Balístico", lethality: null },
-    { name: "Pistola .50 AE (Desert Eagle)", skill: "Armas de Fogo", damage: "2D6", damageType: "Balístico", lethality: 10 },
+    { name: "Pistola 9mm (ex: Glock 17)", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "15+1", notes: "" },
+    { name: "Pistola .45 (ex: Colt 1911)", skill: "Armas de Fogo", damage: "1D10+2", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "7+1", notes: "" },
+    { name: "Revólver .38 Special", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "6", notes: "" },
+    { name: "Revólver .44 Magnum", skill: "Armas de Fogo", damage: "1D12+2", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "6", notes: "" },
+    { name: "Pistola .50 AE (Desert Eagle)", skill: "Armas de Fogo", damage: "2D6", damageType: "Balístico", lethality: 10, range: "15m", rof: "3/rodada", capacity: "7+1", notes: "Letalidade só se alvo a curta distância" },
   ]},
   { group: "Fuzis e Carabinas", items: [
-    { name: "Fuzil de assalto (AK-47 / AR-15)", skill: "Armas de Fogo", damage: "2D6+1", damageType: "Balístico", lethality: null },
-    { name: "Carabina de caça .30-06 (ferrolho)", skill: "Armas de Fogo", damage: "2D6+2", damageType: "Balístico", lethality: 10 },
-    { name: "Fuzil de precisão (.308, com mira)", skill: "Armas de Fogo", damage: "2D6+3", damageType: "Balístico", lethality: 10 },
+    { name: "Fuzil de assalto (AK-47 / AR-15)", skill: "Armas de Fogo", damage: "2D6+1", damageType: "Balístico", lethality: null, range: "90m", rof: "1 ou rajada (3 tiros)", capacity: "30", notes: "Rajada: -20% no ataque, pode acertar múltiplos alvos" },
+    { name: "Carabina de caça .30-06 (ferrolho)", skill: "Armas de Fogo", damage: "2D6+2", damageType: "Balístico", lethality: 10, range: "90m", rof: "1/rodada", capacity: "4–5", notes: "Letalidade só se alvo a curta distância" },
+    { name: "Fuzil de precisão (.308, com mira)", skill: "Armas de Fogo", damage: "2D6+3", damageType: "Balístico", lethality: 10, range: "150m+", rof: "1/rodada", capacity: "5–10", notes: "Mira telescópica: bônus em alvos parados a longa distância" },
   ]},
   { group: "Submetralhadoras", items: [
-    { name: "Submetralhadora 9mm (ex: MP5/Uzi)", skill: "Armas de Fogo", damage: "1D8", damageType: "Balístico", lethality: null },
+    { name: "Submetralhadora 9mm (ex: MP5/Uzi)", skill: "Armas de Fogo", damage: "1D8", damageType: "Balístico", lethality: null, range: "25m", rof: "1 ou automático", capacity: "30–32", notes: "Automático: pode disparar rajadas longas, gasta munição rápido" },
   ]},
   { group: "Espingardas", items: [
-    { name: "Espingarda calibre 12 (pump-action)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 15 },
-    { name: "Espingarda calibre 12 (cano serrado)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 20 },
+    { name: "Espingarda calibre 12 (pump-action)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 15, range: "10m", rof: "1/rodada", capacity: "5–8", notes: "Dano cai para 2D6 além do alcance curto" },
+    { name: "Espingarda calibre 12 (cano serrado)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 20, range: "5m", rof: "1 ou 2 (dois canos)", capacity: "2", notes: "Alcance bem curto, alta letalidade" },
   ]},
   { group: "Armas Pesadas", items: [
-    { name: "Metralhadora leve (LMG, ex: M249)", skill: "Armas Pesadas", damage: "2D6+1", damageType: "Balístico", lethality: null },
-    { name: "Lança-granadas / RPG", skill: "Armas Pesadas", damage: "6D10", damageType: "Explosivo", lethality: 30 },
-    { name: "Granada de fragmentação", skill: "Armas Pesadas", damage: "4D6", damageType: "Explosivo", lethality: 15 },
+    { name: "Metralhadora leve (LMG, ex: M249)", skill: "Armas Pesadas", damage: "2D6+1", damageType: "Balístico", lethality: null, range: "90m", rof: "Automático", capacity: "100–200 (correia)", notes: "Suprimir área; costuma exigir bipé ou apoio" },
+    { name: "Lança-granadas / RPG", skill: "Armas Pesadas", damage: "6D10", damageType: "Explosivo", lethality: 30, range: "100m+", rof: "1/rodada (recarga lenta)", capacity: "1", notes: "Raio de explosão ≈ 4m; risco também para quem disparou se muito perto" },
+    { name: "Granada de fragmentação", skill: "Armas Pesadas", damage: "4D6", damageType: "Explosivo", lethality: 15, range: "Arremesso (força do agente)", rof: "1/rodada", capacity: "1 (uso único)", notes: "Raio de explosão ≈ 3m; detona 1D4 rodadas após o arremesso" },
   ]},
   { group: "Corpo a Corpo", items: [
-    { name: "Faca / adaga", skill: "Armas Corpo a Corpo", damage: "1D4", damageType: "Cortante", lethality: null },
-    { name: "Machado", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Cortante", lethality: null },
-    { name: "Cassetete / bastão", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Contundente", lethality: null },
-    { name: "Taco de beisebol", skill: "Armas Corpo a Corpo", damage: "1D8", damageType: "Contundente", lethality: null },
+    { name: "Faca / adaga", skill: "Armas Corpo a Corpo", damage: "1D4", damageType: "Cortante", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
+    { name: "Machado", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Cortante", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
+    { name: "Cassetete / bastão", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Contundente", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
+    { name: "Taco de beisebol", skill: "Armas Corpo a Corpo", damage: "1D8", damageType: "Contundente", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
   ]},
   { group: "Desarmado", items: [
-    { name: "Golpe desarmado (soco/chute)", skill: "Combate Desarmado", damage: "1D4", damageType: "Contundente", lethality: null },
+    { name: "Golpe desarmado (soco/chute)", skill: "Combate Desarmado", damage: "1D4", damageType: "Contundente", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
   ]},
 ];
 
@@ -1300,21 +1418,27 @@ function renderWeaponThresholds(weapons, skills) {
   const list = (weapons || []).filter(w => w.name);
   if (!list.length) return `<p class="muted small">Nenhuma arma cadastrada.</p>`;
   return `
-    <div class="weapon-threshold-table">
-      <div class="weapon-threshold-row weapon-threshold-head">
-        <span>Arma</span><span>Perícia</span><span>Dano</span><span>Tipo</span><span>Regular</span><span>Difícil</span><span>Extremo</span>
-      </div>
+    <div class="weapon-master-list">
       ${list.map(w => {
         const val = skills[w.skill] || 0;
         return `
-          <div class="weapon-threshold-row">
-            <span>${escapeHtml(w.name)}</span>
-            <span>${escapeHtml(w.skill || "—")}</span>
-            <span>${escapeHtml(w.damage || "—")}${w.lethality ? ` · Let. ${w.lethality}%` : ""}</span>
-            <span>${escapeHtml(w.damageType || "—")}</span>
-            <span>≤ ${val}</span>
-            <span>≤ ${Math.floor(val / 2)}</span>
-            <span>≤ ${Math.floor(val / 5)}</span>
+          <div class="weapon-master-card">
+            <div class="weapon-master-head">
+              <strong>${escapeHtml(w.name)}</strong>
+              <span class="muted small">${escapeHtml(w.skill || "—")} (${val}%)</span>
+            </div>
+            <div class="weapon-master-stats">
+              <span><b>Dano:</b> ${escapeHtml(w.damage || "—")}</span>
+              <span><b>Tipo:</b> ${escapeHtml(w.damageType || "—")}</span>
+              <span><b>Letalidade:</b> ${w.lethality ? w.lethality + "%" : "—"}</span>
+              <span><b>Alcance:</b> ${escapeHtml(w.range || "—")}</span>
+              <span><b>Cadência:</b> ${escapeHtml(w.rof || "—")}</span>
+              <span><b>Capacidade:</b> ${escapeHtml(w.capacity || "—")}</span>
+            </div>
+            ${w.notes ? `<div class="weapon-master-notes small muted"><b>Obs.:</b> ${escapeHtml(w.notes)}</div>` : ""}
+            <div class="weapon-master-thresholds small">
+              Regular ≤ <strong>${val}</strong> · Difícil ≤ <strong>${Math.floor(val / 2)}</strong> · Extremo ≤ <strong>${Math.floor(val / 5)}</strong>
+            </div>
           </div>
         `;
       }).join("")}
@@ -1412,6 +1536,301 @@ async function masterToggleLock(id, currentlyLocked) {
   } catch (e) {
     toast("Erro ao alterar bloqueio: " + e.message, true);
   }
+}
+
+// ============ BATALHA (só o mestre) ============
+let battle = { round: 1, turn_index: 0, combatants: [] };
+let battleCharacterOptions = [];
+let monsterLibrary = [];
+let battlePollTimer = null;
+
+async function loadBattleTab() {
+  await Promise.all([loadBattle(), loadMonsterLibrary(), loadBattleCharacterOptions()]);
+  renderBattleAll();
+  startBattlePolling();
+}
+
+async function loadBattle() {
+  try {
+    const rows = await sbFetch(`battle_state?id=eq.main&select=*`);
+    if (rows && rows.length) {
+      battle.round = rows[0].round;
+      battle.turn_index = rows[0].turn_index;
+      battle.combatants = rows[0].combatants || [];
+    }
+  } catch (e) {
+    toast("Erro ao carregar batalha: " + e.message, true);
+  }
+}
+
+async function saveBattle() {
+  try {
+    await sbFetch(`battle_state?id=eq.main`, {
+      method: "PATCH",
+      body: JSON.stringify({ round: battle.round, turn_index: battle.turn_index, combatants: battle.combatants, updated_at: new Date().toISOString() }),
+    });
+  } catch (e) {
+    toast("Erro ao salvar batalha: " + e.message, true);
+  }
+}
+
+async function loadBattleCharacterOptions() {
+  try {
+    battleCharacterOptions = await sbFetch(`characters?select=id,name,derived,owner_nick&order=name.asc`);
+  } catch (e) {
+    battleCharacterOptions = [];
+  }
+}
+
+async function loadMonsterLibrary() {
+  try {
+    monsterLibrary = await sbFetch(`monsters?select=*&order=name.asc`);
+  } catch (e) {
+    monsterLibrary = [];
+  }
+}
+
+function renderBattleAll() {
+  document.getElementById("battle-round-num").textContent = battle.round;
+  renderBattleAddRow();
+  renderBattleList();
+  renderMonsterForm();
+  renderMonsterLibrary();
+}
+
+function renderBattleAddRow() {
+  const el = document.getElementById("battle-add-row");
+  if (!el) return;
+  el.innerHTML = `
+    <div class="battle-add-grid">
+      <div class="battle-add-col">
+        <label>Adicionar personagem
+          <select id="battle-pick-char">
+            <option value="">— escolher —</option>
+            ${battleCharacterOptions.map(c => `<option value="${c.id}">${escapeHtml(c.name || "(sem nome)")}${c.owner_nick ? " — " + escapeHtml(c.owner_nick) : ""}</option>`).join("")}
+          </select>
+        </label>
+        <button class="btn-small" id="battle-add-char-btn">+ adicionar à batalha</button>
+      </div>
+      <div class="battle-add-col">
+        <label>Adicionar da biblioteca de monstros
+          <select id="battle-pick-monster">
+            <option value="">— escolher —</option>
+            ${monsterLibrary.map(m => `<option value="${m.id}">${escapeHtml(m.name || "(sem nome)")}</option>`).join("")}
+          </select>
+        </label>
+        <button class="btn-small" id="battle-add-monster-btn">+ adicionar à batalha</button>
+      </div>
+      <div class="battle-add-col">
+        <label>Combatente avulso<input type="text" id="battle-adhoc-name" placeholder="ex: Capanga #1"></label>
+        <button class="btn-small" id="battle-add-adhoc-btn">+ adicionar avulso</button>
+      </div>
+    </div>
+  `;
+  const charBtn = document.getElementById("battle-add-char-btn");
+  if (charBtn) charBtn.addEventListener("click", () => {
+    const id = document.getElementById("battle-pick-char").value;
+    const c = battleCharacterOptions.find(x => x.id === id);
+    if (!c) { toast("Escolha um personagem.", true); return; }
+    const hpMax = (c.derived && c.derived.HP) || 10;
+    battle.combatants.push({ id: "c_" + id + "_" + Date.now(), name: c.name || "(sem nome)", kind: "jogador", initiative: 0, hp: hpMax, hpMax, notes: "", ref_id: id });
+    saveBattle(); renderBattleList();
+  });
+  const monBtn = document.getElementById("battle-add-monster-btn");
+  if (monBtn) monBtn.addEventListener("click", () => {
+    const id = document.getElementById("battle-pick-monster").value;
+    const m = monsterLibrary.find(x => x.id === id);
+    if (!m) { toast("Escolha um monstro da biblioteca.", true); return; }
+    battle.combatants.push({ id: "m_" + id + "_" + Date.now(), name: m.name || "(sem nome)", kind: "monstro", initiative: 0, hp: m.hp ?? 10, hpMax: m.hp ?? 10, notes: [m.attack, m.damage].filter(Boolean).join(" · "), ref_id: id });
+    saveBattle(); renderBattleList();
+  });
+  const adhocBtn = document.getElementById("battle-add-adhoc-btn");
+  if (adhocBtn) adhocBtn.addEventListener("click", () => {
+    const nameInp = document.getElementById("battle-adhoc-name");
+    const name = (nameInp.value || "").trim() || "Combatente";
+    battle.combatants.push({ id: "a_" + Date.now(), name, kind: "monstro", initiative: 0, hp: 10, hpMax: 10, notes: "" });
+    nameInp.value = "";
+    saveBattle(); renderBattleList();
+  });
+}
+
+function renderBattleList() {
+  const el = document.getElementById("battle-list");
+  if (!el) return;
+  const roundEl = document.getElementById("battle-round-num");
+  if (roundEl) roundEl.textContent = battle.round;
+  if (!battle.combatants.length) {
+    el.innerHTML = `<p class="muted small">Nenhum combatente na batalha ainda. Adicione jogadores, monstros da biblioteca ou um combatente avulso acima.</p>`;
+    return;
+  }
+  el.innerHTML = `
+    <div class="battle-order-list">
+      ${battle.combatants.map((c, i) => `
+        <div class="battle-combatant ${i === battle.turn_index ? "active-turn" : ""} ${c.kind === "monstro" ? "is-monster" : "is-player"}">
+          <div class="battle-combatant-head">
+            <span class="battle-turn-marker">${i === battle.turn_index ? "▶" : ""}</span>
+            <input type="number" class="battle-init" data-i="${i}" value="${c.initiative}" title="Iniciativa">
+            <strong>${escapeHtml(c.name)}</strong>
+            <span class="muted small">${c.kind === "jogador" ? "Jogador" : "Inimigo"}</span>
+            <button class="btn-tiny" data-i="${i}" data-act="remove-combatant">×</button>
+          </div>
+          <div class="battle-combatant-hp">
+            <span>PV</span>
+            <button class="btn-tiny" data-i="${i}" data-act="hp-minus">−</button>
+            <strong>${c.hp} / ${c.hpMax}</strong>
+            <button class="btn-tiny" data-i="${i}" data-act="hp-plus">+</button>
+            ${c.notes ? `<span class="battle-notes muted">${escapeHtml(c.notes)}</span>` : ""}
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  el.querySelectorAll(".battle-init").forEach(inp => inp.addEventListener("change", (e) => {
+    battle.combatants[e.target.dataset.i].initiative = Number(e.target.value || 0);
+    saveBattle();
+  }));
+  el.querySelectorAll("button[data-act=remove-combatant]").forEach(btn => btn.addEventListener("click", (e) => {
+    const i = Number(e.target.dataset.i);
+    battle.combatants.splice(i, 1);
+    if (battle.turn_index >= battle.combatants.length) battle.turn_index = 0;
+    saveBattle(); renderBattleList();
+  }));
+  el.querySelectorAll("button[data-act=hp-minus]").forEach(btn => btn.addEventListener("click", (e) => {
+    const c = battle.combatants[e.target.dataset.i];
+    c.hp = Math.max(0, c.hp - 1);
+    saveBattle(); renderBattleList();
+  }));
+  el.querySelectorAll("button[data-act=hp-plus]").forEach(btn => btn.addEventListener("click", (e) => {
+    const c = battle.combatants[e.target.dataset.i];
+    c.hp = Math.min(c.hpMax, c.hp + 1);
+    saveBattle(); renderBattleList();
+  }));
+}
+
+function sortBattleByInitiative() {
+  if (!battle.combatants.length) return;
+  const activeId = battle.combatants[battle.turn_index] && battle.combatants[battle.turn_index].id;
+  battle.combatants.sort((a, b) => (b.initiative || 0) - (a.initiative || 0));
+  if (activeId) {
+    const idx = battle.combatants.findIndex(c => c.id === activeId);
+    battle.turn_index = idx >= 0 ? idx : 0;
+  }
+  saveBattle(); renderBattleList();
+  toast("Ordem de iniciativa atualizada.");
+}
+
+function battleNextTurn() {
+  if (!battle.combatants.length) return;
+  battle.turn_index++;
+  if (battle.turn_index >= battle.combatants.length) { battle.turn_index = 0; battle.round++; }
+  saveBattle(); renderBattleList();
+}
+
+function battlePrevTurn() {
+  if (!battle.combatants.length) return;
+  battle.turn_index--;
+  if (battle.turn_index < 0) { battle.turn_index = battle.combatants.length - 1; battle.round = Math.max(1, battle.round - 1); }
+  saveBattle(); renderBattleList();
+}
+
+function battleResetCombat() {
+  if (!confirm("Encerrar o combate e limpar a lista de combatentes?")) return;
+  battle = { round: 1, turn_index: 0, combatants: [] };
+  saveBattle(); renderBattleList();
+  toast("Combate encerrado.");
+}
+
+function renderMonsterForm() {
+  const el = document.getElementById("monster-form");
+  if (!el) return;
+  el.innerHTML = `
+    <div class="field-grid">
+      <label>Nome<input type="text" id="mon-name" placeholder="ex: Híbrido Profundo"></label>
+      <label>PV<input type="number" id="mon-hp" placeholder="ex: 12"></label>
+      <label>WP<input type="number" id="mon-wp" placeholder="opcional"></label>
+      <label>Armadura<input type="text" id="mon-armor" placeholder="ex: 2 pontos, couro grosso"></label>
+      <label>Ataque / Perícia<input type="text" id="mon-attack" placeholder="ex: Mordida 60%"></label>
+      <label>Dano<input type="text" id="mon-damage" placeholder="ex: 1D6+2"></label>
+    </div>
+    <label>Observações<textarea id="mon-notes" rows="2" placeholder="Capacidades especiais, fraquezas, comportamento..."></textarea></label>
+    <button class="btn-primary" id="mon-save-btn">Salvar na biblioteca</button>
+  `;
+  document.getElementById("mon-save-btn").addEventListener("click", saveMonster);
+}
+
+async function saveMonster() {
+  const name = document.getElementById("mon-name").value.trim();
+  if (!name) { toast("Dê um nome ao monstro.", true); return; }
+  const payload = {
+    name,
+    hp: document.getElementById("mon-hp").value ? Number(document.getElementById("mon-hp").value) : null,
+    wp: document.getElementById("mon-wp").value ? Number(document.getElementById("mon-wp").value) : null,
+    armor: document.getElementById("mon-armor").value,
+    attack: document.getElementById("mon-attack").value,
+    damage: document.getElementById("mon-damage").value,
+    notes: document.getElementById("mon-notes").value,
+  };
+  try {
+    await sbFetch("monsters", { method: "POST", body: JSON.stringify(payload) });
+    toast("Monstro salvo na biblioteca.");
+    await loadMonsterLibrary();
+    renderMonsterForm();
+    renderMonsterLibrary();
+    renderBattleAddRow();
+  } catch (e) {
+    toast("Erro ao salvar monstro: " + e.message, true);
+  }
+}
+
+function renderMonsterLibrary() {
+  const el = document.getElementById("monster-library");
+  if (!el) return;
+  if (!monsterLibrary.length) { el.innerHTML = `<p class="muted small">Nenhum monstro salvo ainda.</p>`; return; }
+  el.innerHTML = monsterLibrary.map(m => `
+    <div class="monster-card">
+      <div class="monster-card-head">
+        <strong>${escapeHtml(m.name)}</strong>
+        <span class="muted small">${m.hp != null ? "PV " + m.hp : ""}${m.wp != null ? " · WP " + m.wp : ""}</span>
+      </div>
+      <div class="muted small">${[m.attack, m.damage, m.armor].filter(Boolean).map(t => escapeHtml(t)).join(" · ")}</div>
+      ${m.notes ? `<div class="small muted">${escapeHtml(m.notes)}</div>` : ""}
+      <div class="monster-card-actions">
+        <button class="btn-small" data-id="${m.id}" data-act="add-to-battle">+ adicionar à batalha</button>
+        <button class="btn-small btn-danger" data-id="${m.id}" data-act="delete-monster">Excluir</button>
+      </div>
+    </div>
+  `).join("");
+  el.querySelectorAll("button[data-act=add-to-battle]").forEach(btn => btn.addEventListener("click", (e) => {
+    const m = monsterLibrary.find(x => x.id === e.target.dataset.id);
+    if (!m) return;
+    battle.combatants.push({ id: "m_" + m.id + "_" + Date.now(), name: m.name, kind: "monstro", initiative: 0, hp: m.hp ?? 10, hpMax: m.hp ?? 10, notes: [m.attack, m.damage].filter(Boolean).join(" · "), ref_id: m.id });
+    saveBattle(); renderBattleList();
+    toast(`${m.name} adicionado à batalha.`);
+  }));
+  el.querySelectorAll("button[data-act=delete-monster]").forEach(btn => btn.addEventListener("click", async (e) => {
+    if (!confirm("Excluir este monstro da biblioteca?")) return;
+    try {
+      await sbFetch(`monsters?id=eq.${e.target.dataset.id}`, { method: "DELETE", prefer: "return=minimal" });
+      await loadMonsterLibrary();
+      renderMonsterLibrary();
+      renderBattleAddRow();
+      toast("Monstro excluído.");
+    } catch (err) {
+      toast("Erro ao excluir: " + err.message, true);
+    }
+  }));
+}
+
+function startBattlePolling() {
+  stopBattlePolling();
+  battlePollTimer = setInterval(async () => {
+    await loadBattle();
+    renderBattleList();
+  }, 5000);
+}
+function stopBattlePolling() {
+  if (battlePollTimer) clearInterval(battlePollTimer);
+  battlePollTimer = null;
 }
 
 function timeAgo(iso) {
@@ -1531,6 +1950,7 @@ function switchTab(tab) {
   if (tab === "fichas") loadCharacterList();
   if (tab === "progressao") loadProgressionList();
   if (tab === "mestre") startMasterPolling(); else stopMasterPolling();
+  if (tab === "batalha") loadBattleTab(); else stopBattlePolling();
 }
 
 
@@ -1812,28 +2232,36 @@ function renderWeapons() {
       <button class="btn-small" id="weapon-picker-add" ${D}>+ adicionar da lista</button>
       <button class="btn-small" id="add-weapon-btn" ${D}>+ arma personalizada</button>
     </div>
-    <p class="muted small">Valores de dano são referência — ajuste com o mestre conforme a arma exata. Em armas corpo a corpo/desarmado, some seu dano bônus.</p>
+    <p class="muted small">Valores são referência — ajuste com o mestre conforme a arma exata. Em corpo a corpo/desarmado, some seu dano bônus.</p>
   `;
   if (!state.weapons.length) {
     el.innerHTML = pickerHtml + `<p class="muted small">Nenhuma arma cadastrada ainda.</p>`;
   } else {
     el.innerHTML = pickerHtml + `
-      <div class="skills-table">
+      <div class="weapon-list">
         <div class="weapon-row weapon-head">
           <span>Nome</span><span>Perícia</span><span>Dano</span><span>Tipo de dano</span><span>Letalidade %</span><span></span>
         </div>
         ${state.weapons.map((w, i) => `
-          <div class="weapon-row">
-            <input type="text" class="wpn-name" data-i="${i}" placeholder="Nome da arma" value="${escapeHtml(w.name || "")}" ${D}>
-            <select class="wpn-skill" data-i="${i}" ${D}>
-              ${COMBAT_SKILLS.map(s => `<option value="${s}" ${s === w.skill ? "selected" : ""}>${s}</option>`).join("")}
-            </select>
-            <input type="text" class="wpn-damage" data-i="${i}" placeholder="ex: 2d6+2" value="${escapeHtml(w.damage || "")}" ${D}>
-            <select class="wpn-type" data-i="${i}" ${D}>
-              ${DAMAGE_TYPES.map(t => `<option value="${t}" ${t === w.damageType ? "selected" : ""}>${t}</option>`).join("")}
-            </select>
-            <input type="number" class="wpn-lethality" data-i="${i}" placeholder="opcional" value="${w.lethality ?? ""}" ${D}>
-            <button class="btn-tiny" data-i="${i}" data-act="remove-weapon" ${D}>×</button>
+          <div class="weapon-card">
+            <div class="weapon-row">
+              <input type="text" class="wpn-name" data-i="${i}" placeholder="Nome da arma" value="${escapeHtml(w.name || "")}" ${D}>
+              <select class="wpn-skill" data-i="${i}" ${D}>
+                ${COMBAT_SKILLS.map(s => `<option value="${s}" ${s === w.skill ? "selected" : ""}>${s}</option>`).join("")}
+              </select>
+              <input type="text" class="wpn-damage" data-i="${i}" placeholder="ex: 2d6+2" value="${escapeHtml(w.damage || "")}" ${D}>
+              <select class="wpn-type" data-i="${i}" ${D}>
+                ${DAMAGE_TYPES.map(t => `<option value="${t}" ${t === w.damageType ? "selected" : ""}>${t}</option>`).join("")}
+              </select>
+              <input type="number" class="wpn-lethality" data-i="${i}" placeholder="opcional" value="${w.lethality ?? ""}" ${D}>
+              <button class="btn-tiny" data-i="${i}" data-act="remove-weapon" ${D}>×</button>
+            </div>
+            <div class="weapon-extra-row">
+              <label>Alcance<input type="text" class="wpn-range" data-i="${i}" placeholder="ex: 15m" value="${escapeHtml(w.range || "")}" ${D}></label>
+              <label>Cadência<input type="text" class="wpn-rof" data-i="${i}" placeholder="ex: 1/rodada" value="${escapeHtml(w.rof || "")}" ${D}></label>
+              <label>Capacidade<input type="text" class="wpn-capacity" data-i="${i}" placeholder="ex: 15+1" value="${escapeHtml(w.capacity || "")}" ${D}></label>
+              <label>Observações<input type="text" class="wpn-notes" data-i="${i}" placeholder="ex: raio de explosão, recarga..." value="${escapeHtml(w.notes || "")}" ${D}></label>
+            </div>
           </div>
         `).join("")}
       </div>
@@ -1844,10 +2272,14 @@ function renderWeapons() {
   el.querySelectorAll(".wpn-damage").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].damage = e.target.value; }));
   el.querySelectorAll(".wpn-type").forEach(sel => sel.addEventListener("change", (e) => { state.weapons[e.target.dataset.i].damageType = e.target.value; }));
   el.querySelectorAll(".wpn-lethality").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].lethality = e.target.value ? Number(e.target.value) : null; }));
+  el.querySelectorAll(".wpn-range").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].range = e.target.value; }));
+  el.querySelectorAll(".wpn-rof").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].rof = e.target.value; }));
+  el.querySelectorAll(".wpn-capacity").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].capacity = e.target.value; }));
+  el.querySelectorAll(".wpn-notes").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].notes = e.target.value; }));
   el.querySelectorAll("button[data-act=remove-weapon]").forEach(btn => btn.addEventListener("click", (e) => { state.weapons.splice(Number(e.target.dataset.i), 1); renderWeapons(); }));
   const addBtn = document.getElementById("add-weapon-btn");
   if (addBtn) addBtn.addEventListener("click", () => {
-    state.weapons.push({ name: "", skill: COMBAT_SKILLS[0], damage: "", damageType: DAMAGE_TYPES[0], lethality: null });
+    state.weapons.push({ name: "", skill: COMBAT_SKILLS[0], damage: "", damageType: DAMAGE_TYPES[0], lethality: null, range: "", rof: "", capacity: "", notes: "" });
     renderWeapons();
   });
   const pickBtn = document.getElementById("weapon-picker-add");
@@ -1857,7 +2289,7 @@ function renderWeapons() {
     const grp = WEAPON_PRESETS.find(g => g.group === gname);
     const item = grp && grp.items[Number(idx)];
     if (!item) return;
-    state.weapons.push({ name: item.name, skill: item.skill, damage: item.damage, damageType: item.damageType, lethality: item.lethality });
+    state.weapons.push({ name: item.name, skill: item.skill, damage: item.damage, damageType: item.damageType, lethality: item.lethality, range: item.range || "", rof: item.rof || "", capacity: item.capacity || "", notes: item.notes || "" });
     renderWeapons();
   });
 }
@@ -1941,6 +2373,11 @@ function renderSummary() {
     if (e.key === "Enter") loginAsPlayer(document.getElementById("login-nick").value, e.target.value);
   });
   document.getElementById("login-master-pass").addEventListener("keydown", (e) => { if (e.key === "Enter") loginAsMaster(e.target.value); });
+
+  document.getElementById("battle-sort-btn").addEventListener("click", sortBattleByInitiative);
+  document.getElementById("battle-next-btn").addEventListener("click", battleNextTurn);
+  document.getElementById("battle-prev-btn").addEventListener("click", battlePrevTurn);
+  document.getElementById("battle-reset-btn").addEventListener("click", battleResetCombat);
 
   // Auto-login se já houver sessão salva neste navegador
   if (auth.role === "jogador" || auth.role === "mestre") {
