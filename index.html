@@ -173,6 +173,23 @@
   .specialized-row { grid-template-columns: 1fr 1.4fr 70px auto !important; }
   .specialized-row select, .specialized-row input { font-size: 12.5px; padding: 4px 6px; margin: 0; }
 
+  .weapon-row {
+    display: grid; grid-template-columns: 1.3fr 1.2fr 0.9fr 1fr 0.8fr auto;
+    gap: 6px; align-items: center; padding: 5px 8px; border-radius: 4px; font-size: 12.5px;
+  }
+  .weapon-row:not(.weapon-head):nth-child(even) { background: var(--paper); }
+  .weapon-row.weapon-head { font-weight: 700; color: var(--ink-soft); font-size: 11px; }
+  .weapon-row select, .weapon-row input { font-size: 12.5px; padding: 4px 6px; margin: 0; }
+
+  .weapon-threshold-table { margin-top: 10px; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .weapon-threshold-row {
+    display: grid; grid-template-columns: 1.3fr 1.1fr 1fr 1fr 0.8fr 0.8fr 0.8fr;
+    padding: 5px 10px; font-size: 12.5px; border-bottom: 1px solid var(--line);
+  }
+  .weapon-threshold-row:last-child { border-bottom: none; }
+  .weapon-threshold-row:nth-child(even) { background: var(--paper); }
+  .weapon-threshold-head { font-weight: 700; background: var(--black-bar) !important; color: #fff; }
+
   .btn-primary {
     background: var(--red);
     color: #fff;
@@ -247,6 +264,26 @@
   .bar-item.warn strong { color: var(--red-bright); }
   .master-bonds { margin-top: 8px; }
   .master-warning { margin-top: 8px; color: var(--red-bright); font-size: 12.5px; font-weight: 600; }
+
+  .master-editors { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+  .master-editor-item {
+    display: flex; align-items: center; gap: 6px; font-size: 13px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 5px 8px;
+  }
+  .master-editor-item span { font-size: 11px; color: var(--ink-soft); }
+  .master-editor-item strong { font-family: 'IBM Plex Mono', monospace; min-width: 52px; text-align: center; }
+
+  .master-thresholds { margin-top: 8px; }
+  .master-toggle-skills { margin-top: 10px; }
+
+  .threshold-table { margin-top: 10px; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .threshold-row {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+    padding: 5px 10px; font-size: 12.5px; border-bottom: 1px solid var(--line);
+  }
+  .threshold-row:last-child { border-bottom: none; }
+  .threshold-row:nth-child(even) { background: var(--paper); }
+  .threshold-head { font-weight: 700; background: var(--black-bar) !important; color: #fff; }
 
   /* ===== LOGIN GATE ===== */
   .login-gate {
@@ -376,6 +413,11 @@
       <div class="section">
         <div class="section-title">6. Vínculos Pessoais</div>
         <div id="panel-bonds"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">6b. Armas</div>
+        <div id="panel-weapons"></div>
       </div>
 
       <div class="section">
@@ -769,6 +811,8 @@ function enterApp() {
 
 // ============ ESTADO ============
 const SPECIALIZABLE = ["Língua Estrangeira", "Ciência", "Ofício", "Arte", "Ciência Militar", "Piloto"];
+const COMBAT_SKILLS = ["Armas de Fogo", "Armas Corpo a Corpo", "Combate Desarmado", "Armas Pesadas", "Artilharia"];
+const DAMAGE_TYPES = ["Contundente", "Cortante", "Perfurante", "Balístico", "Fogo", "Químico", "Elétrico", "Explosivo", "Outro"];
 
 let state = {
   id: null,
@@ -1046,13 +1090,18 @@ function adjustLive(field, delta) {
 
 // ============ MESTRE (PAINEL EM TEMPO REAL) ============
 let masterPollTimer = null;
+let masterRowsCache = {};
+let masterExpanded = {}; // id -> bool, mantém aberto entre polls
+let masterEditsPending = {}; // id -> {hp,wp,san} otimista, sobrescreve o que veio do servidor até o próximo save confirmado
 
 async function loadMasterView() {
   const el = document.getElementById("master-list");
   try {
-    const rows = await sbFetch("characters?select=id,name,profession,stats,derived,live,bonds,updated_at&order=name.asc");
+    const rows = await sbFetch("characters?select=id,name,profession,stats,derived,skills,weapons,live,bonds,updated_at&order=name.asc");
     if (!rows.length) { el.innerHTML = `<p class="muted">Nenhuma ficha salva ainda.</p>`; return; }
+    rows.forEach(r => { masterRowsCache[r.id] = r; });
     el.innerHTML = rows.map(r => renderMasterCard(r)).join("");
+    bindMasterCardEvents();
   } catch (e) {
     el.innerHTML = `<p class="muted">Erro ao carregar: ${escapeHtml(e.message)}</p>`;
   }
@@ -1060,7 +1109,8 @@ async function loadMasterView() {
 
 function renderMasterCard(r) {
   const d = r.derived || {};
-  const live = r.live || {};
+  const pending = masterEditsPending[r.id] || {};
+  const live = { ...(r.live || {}), ...pending };
   const hp = live.hp ?? d.HP ?? 0, hpMax = d.HP ?? 0;
   const wp = live.wp ?? d.WP ?? 0, wpMax = d.WP ?? 0;
   const san = live.san ?? d.SAN ?? 0, sanMax = d.SAN ?? 0;
@@ -1069,23 +1119,137 @@ function renderMasterCard(r) {
   const hpDanger = hp <= Math.ceil(hpMax / 2) && hpMax > 0;
   const ago = timeAgo(r.updated_at);
   const bonds = (r.bonds || []).map(b => `${escapeHtml(b.name || "?")} (${b.value})`).join(" · ");
+  const expanded = !!masterExpanded[r.id];
+
   return `
-    <div class="master-card ${sanDanger ? 'danger' : ''}">
+    <div class="master-card ${sanDanger ? 'danger' : ''}" data-id="${r.id}">
       <div class="master-card-head">
         <strong>${escapeHtml(r.name || "(sem nome)")}</strong>
         <span class="muted small">${escapeHtml(r.profession || "")}</span>
         <span class="muted small master-ago">atualizado ${ago}</span>
       </div>
-      <div class="master-bars">
-        <div class="bar-item ${hpDanger ? 'warn' : ''}"><span>PV</span><strong>${hp}/${hpMax}</strong></div>
-        <div class="bar-item"><span>WP</span><strong>${wp}/${wpMax}</strong></div>
-        <div class="bar-item ${sanDanger ? 'warn' : ''}"><span>SAN</span><strong>${san}/${sanMax}</strong></div>
+
+      <div class="master-editors">
+        ${[["hp", "PV", hp, hpMax], ["wp", "WP", wp, wpMax], ["san", "SAN", san, sanMax]].map(([field, label, val, max]) => `
+          <div class="master-editor-item">
+            <span>${label}</span>
+            <button class="btn-tiny" data-master-adjust data-id="${r.id}" data-field="${field}" data-delta="-1">−</button>
+            <strong>${val} / ${max}</strong>
+            <button class="btn-tiny" data-master-adjust data-id="${r.id}" data-field="${field}" data-delta="1">+</button>
+          </div>
+        `).join("")}
         <div class="bar-item"><span>BP</span><strong>${bp}</strong></div>
       </div>
+
       ${bonds ? `<div class="master-bonds small muted">Vínculos: ${bonds}</div>` : ""}
       ${sanDanger ? `<div class="master-warning">⚠ SAN no Breaking Point ou abaixo — risco de transtorno</div>` : ""}
+      ${hp <= 2 && hpMax > 0 ? `<div class="master-warning">⚠ PV ≤ 2 — inconsciente, risco de ferimento permanente</div>` : ""}
+      ${wp <= 2 && wpMax > 0 ? `<div class="master-warning">⚠ WP ≤ 2 — colapso emocional</div>` : ""}
+
+      <div class="master-thresholds small muted">
+        Atordoa com 1 golpe ≥ <strong>${Math.ceil(hp / 2) || 0}</strong> dano · Inconsciente em <strong>2 PV</strong> · Morte em <strong>0 PV</strong> · Colapso em <strong>2 WP</strong>
+      </div>
+
+      <button class="btn-small master-toggle-skills" data-id="${r.id}">${expanded ? "Ocultar perícias e limiares" : "Ver perícias e limiares"}</button>
+      ${expanded ? renderSkillThresholds(r.skills || {}) : ""}
+      ${expanded ? renderWeaponThresholds(r.weapons || [], r.skills || {}) : ""}
     </div>
   `;
+}
+
+function renderWeaponThresholds(weapons, skills) {
+  const list = (weapons || []).filter(w => w.name);
+  if (!list.length) return `<p class="muted small">Nenhuma arma cadastrada.</p>`;
+  return `
+    <div class="weapon-threshold-table">
+      <div class="weapon-threshold-row weapon-threshold-head">
+        <span>Arma</span><span>Perícia</span><span>Dano</span><span>Tipo</span><span>Regular</span><span>Difícil</span><span>Extremo</span>
+      </div>
+      ${list.map(w => {
+        const val = skills[w.skill] || 0;
+        return `
+          <div class="weapon-threshold-row">
+            <span>${escapeHtml(w.name)}</span>
+            <span>${escapeHtml(w.skill || "—")}</span>
+            <span>${escapeHtml(w.damage || "—")}${w.lethality ? ` · Let. ${w.lethality}%` : ""}</span>
+            <span>${escapeHtml(w.damageType || "—")}</span>
+            <span>≤ ${val}</span>
+            <span>≤ ${Math.floor(val / 2)}</span>
+            <span>≤ ${Math.floor(val / 5)}</span>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderSkillThresholds(skills) {
+  const entries = Object.entries(skills).filter(([, v]) => v > 0);
+  if (!entries.length) return `<p class="muted small">Sem perícias acima de 0%.</p>`;
+  entries.sort((a, b) => b[1] - a[1]);
+  return `
+    <div class="threshold-table">
+      <div class="threshold-row threshold-head">
+        <span>Perícia</span><span>Regular</span><span>Difícil</span><span>Extremo</span>
+      </div>
+      ${entries.map(([name, val]) => `
+        <div class="threshold-row">
+          <span>${escapeHtml(name)}</span>
+          <span>≤ ${val}</span>
+          <span>≤ ${Math.floor(val / 2)}</span>
+          <span>≤ ${Math.floor(val / 5)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function bindMasterCardEvents() {
+  document.querySelectorAll("#master-list button[data-master-adjust]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      masterAdjustLive(btn.dataset.id, btn.dataset.field, Number(btn.dataset.delta));
+    });
+  });
+  document.querySelectorAll("#master-list .master-toggle-skills").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      masterExpanded[id] = !masterExpanded[id];
+      const r = masterRowsCache[id];
+      if (r) {
+        const card = document.querySelector(`#master-list .master-card[data-id="${id}"]`);
+        if (card) card.outerHTML = renderMasterCard(r);
+        bindMasterCardEvents();
+      }
+    });
+  });
+}
+
+async function masterAdjustLive(id, field, delta) {
+  const r = masterRowsCache[id];
+  if (!r) return;
+  const d = r.derived || {};
+  const maxMap = { hp: d.HP ?? 0, wp: d.WP ?? 0, san: d.SAN ?? 0 };
+  const pending = masterEditsPending[id] || { ...(r.live || {}) };
+  const current = pending[field] ?? (r.live || {})[field] ?? maxMap[field];
+  const next = Math.max(0, Math.min(maxMap[field], current + delta));
+  pending[field] = next;
+  masterEditsPending[id] = pending;
+
+  // atualização otimista imediata na tela
+  const card = document.querySelector(`#master-list .master-card[data-id="${id}"]`);
+  if (card) { card.outerHTML = renderMasterCard(r); bindMasterCardEvents(); }
+
+  try {
+    const fullLive = { ...(r.live || {}), ...pending };
+    await sbFetch(`characters?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ live: fullLive, updated_at: new Date().toISOString() }),
+    });
+    r.live = fullLive;
+    delete masterEditsPending[id];
+  } catch (e) {
+    toast("Erro ao salvar PV/SAN: " + e.message, true);
+  }
 }
 
 function timeAgo(iso) {
@@ -1219,6 +1383,7 @@ function renderAll() {
   renderChooseGroups();
   renderSkills();
   renderSpecialized();
+  renderWeapons();
   renderBonds();
   renderMotivations();
   renderSummary();
@@ -1462,6 +1627,48 @@ function renderSpecialized() {
   if (addBtn) addBtn.addEventListener("click", () => {
     state.specialized.push({ group: "Língua Estrangeira", label: "", value: 0 });
     renderSpecialized();
+  });
+}
+
+function renderWeapons() {
+  const el = document.getElementById("panel-weapons");
+  if (!el) return;
+  if (!state.weapons.length) {
+    el.innerHTML = `<p class="muted small">Nenhuma arma cadastrada ainda.</p><button class="btn-small" id="add-weapon-btn">+ adicionar arma</button>`;
+  } else {
+    el.innerHTML = `
+      <div class="skills-table">
+        <div class="weapon-row weapon-head">
+          <span>Nome</span><span>Perícia</span><span>Dano</span><span>Tipo de dano</span><span>Letalidade %</span><span></span>
+        </div>
+        ${state.weapons.map((w, i) => `
+          <div class="weapon-row">
+            <input type="text" class="wpn-name" data-i="${i}" placeholder="Nome da arma" value="${escapeHtml(w.name || "")}">
+            <select class="wpn-skill" data-i="${i}">
+              ${COMBAT_SKILLS.map(s => `<option value="${s}" ${s === w.skill ? "selected" : ""}>${s}</option>`).join("")}
+            </select>
+            <input type="text" class="wpn-damage" data-i="${i}" placeholder="ex: 2d6+2" value="${escapeHtml(w.damage || "")}">
+            <select class="wpn-type" data-i="${i}">
+              ${DAMAGE_TYPES.map(t => `<option value="${t}" ${t === w.damageType ? "selected" : ""}>${t}</option>`).join("")}
+            </select>
+            <input type="number" class="wpn-lethality" data-i="${i}" placeholder="opcional" value="${w.lethality ?? ""}">
+            <button class="btn-tiny" data-i="${i}" data-act="remove-weapon">×</button>
+          </div>
+        `).join("")}
+      </div>
+      <button class="btn-small" id="add-weapon-btn">+ adicionar arma</button>
+    `;
+  }
+  el.querySelectorAll(".wpn-name").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].name = e.target.value; }));
+  el.querySelectorAll(".wpn-skill").forEach(sel => sel.addEventListener("change", (e) => { state.weapons[e.target.dataset.i].skill = e.target.value; }));
+  el.querySelectorAll(".wpn-damage").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].damage = e.target.value; }));
+  el.querySelectorAll(".wpn-type").forEach(sel => sel.addEventListener("change", (e) => { state.weapons[e.target.dataset.i].damageType = e.target.value; }));
+  el.querySelectorAll(".wpn-lethality").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].lethality = e.target.value ? Number(e.target.value) : null; }));
+  el.querySelectorAll("button[data-act=remove-weapon]").forEach(btn => btn.addEventListener("click", (e) => { state.weapons.splice(Number(e.target.dataset.i), 1); renderWeapons(); }));
+  const addBtn = document.getElementById("add-weapon-btn");
+  if (addBtn) addBtn.addEventListener("click", () => {
+    state.weapons.push({ name: "", skill: COMBAT_SKILLS[0], damage: "", damageType: DAMAGE_TYPES[0], lethality: null });
+    renderWeapons();
   });
 }
 
