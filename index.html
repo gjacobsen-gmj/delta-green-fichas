@@ -323,6 +323,21 @@
   .role-bar { margin-top: 8px; display: flex; justify-content: center; align-items: center; gap: 12px; }
   .role-bar span { color: #cbb; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
   .role-bar .btn-small { background: transparent; color: var(--paper); border-color: #665; }
+
+  /* ===== BLOQUEIO DE FICHA ===== */
+  .lock-banner {
+    background: var(--red); color: #fff; padding: 10px 14px; border-radius: 6px;
+    font-size: 12.5px; font-weight: 600; margin-bottom: 16px;
+  }
+  .lock-banner.unlocked { background: #3a6b3a; }
+  .master-lock-badge { font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .master-lock-badge.locked { color: var(--red-bright); }
+  .master-lock-badge.unlocked { color: #3a6b3a; }
+  button:disabled, input:disabled, select:disabled, textarea:disabled { opacity: 0.55; cursor: not-allowed; }
+
+  /* ===== SELETOR DE ARMAS DA LISTA ===== */
+  .weapon-picker-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; align-items: center; }
+  .weapon-picker-row select { flex: 1 1 260px; margin: 0; }
 </style>
 </head>
 <body>
@@ -372,6 +387,7 @@
 
   <div class="tab-panel active" id="panel-criar">
     <div class="sheet">
+      <div id="panel-lock-banner"></div>
       <div class="summary-box" id="panel-summary"></div>
 
       <div class="section">
@@ -426,8 +442,8 @@
       </div>
 
       <div class="save-bar">
-        <button class="btn-primary" onclick="saveCharacter()">Salvar Ficha</button>
-        <button class="btn-small" onclick="location.reload()">Nova Ficha</button>
+        <button class="btn-primary" id="save-char-btn" onclick="saveCharacter()">Salvar Ficha</button>
+        <button class="btn-small" onclick="startNewCharacter()">Nova Ficha</button>
       </div>
     </div>
   </div>
@@ -747,6 +763,43 @@ const PROFESSIONS = [
 ];
 
 
+// Lista de armas de referência p/ o seletor rápido da seção 6b (valores de referência — ajustar com o mestre)
+const WEAPON_PRESETS = [
+  { group: "Armas Curtas de Fogo", items: [
+    { name: "Pistola 9mm (ex: Glock 17)", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null },
+    { name: "Pistola .45 (ex: Colt 1911)", skill: "Armas de Fogo", damage: "1D10+2", damageType: "Balístico", lethality: null },
+    { name: "Revólver .38 Special", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null },
+    { name: "Revólver .44 Magnum", skill: "Armas de Fogo", damage: "1D12+2", damageType: "Balístico", lethality: null },
+    { name: "Pistola .50 AE (Desert Eagle)", skill: "Armas de Fogo", damage: "2D6", damageType: "Balístico", lethality: 10 },
+  ]},
+  { group: "Fuzis e Carabinas", items: [
+    { name: "Fuzil de assalto (AK-47 / AR-15)", skill: "Armas de Fogo", damage: "2D6+1", damageType: "Balístico", lethality: null },
+    { name: "Carabina de caça .30-06 (ferrolho)", skill: "Armas de Fogo", damage: "2D6+2", damageType: "Balístico", lethality: 10 },
+    { name: "Fuzil de precisão (.308, com mira)", skill: "Armas de Fogo", damage: "2D6+3", damageType: "Balístico", lethality: 10 },
+  ]},
+  { group: "Submetralhadoras", items: [
+    { name: "Submetralhadora 9mm (ex: MP5/Uzi)", skill: "Armas de Fogo", damage: "1D8", damageType: "Balístico", lethality: null },
+  ]},
+  { group: "Espingardas", items: [
+    { name: "Espingarda calibre 12 (pump-action)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 15 },
+    { name: "Espingarda calibre 12 (cano serrado)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 20 },
+  ]},
+  { group: "Armas Pesadas", items: [
+    { name: "Metralhadora leve (LMG, ex: M249)", skill: "Armas Pesadas", damage: "2D6+1", damageType: "Balístico", lethality: null },
+    { name: "Lança-granadas / RPG", skill: "Armas Pesadas", damage: "6D10", damageType: "Explosivo", lethality: 30 },
+    { name: "Granada de fragmentação", skill: "Armas Pesadas", damage: "4D6", damageType: "Explosivo", lethality: 15 },
+  ]},
+  { group: "Corpo a Corpo", items: [
+    { name: "Faca / adaga", skill: "Armas Corpo a Corpo", damage: "1D4", damageType: "Cortante", lethality: null },
+    { name: "Machado", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Cortante", lethality: null },
+    { name: "Cassetete / bastão", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Contundente", lethality: null },
+    { name: "Taco de beisebol", skill: "Armas Corpo a Corpo", damage: "1D8", damageType: "Contundente", lethality: null },
+  ]},
+  { group: "Desarmado", items: [
+    { name: "Golpe desarmado (soco/chute)", skill: "Combate Desarmado", damage: "1D4", damageType: "Contundente", lethality: null },
+  ]},
+];
+
 // ============ AUTENTICAÇÃO (LOGIN SIMPLES) ============
 const MASTER_PASSWORD = "SCP1151";
 
@@ -786,13 +839,14 @@ function loginAsMaster(password) {
 }
 
 function logout() {
+  stopLockWatcher();
   localStorage.removeItem("dg_role");
   localStorage.removeItem("dg_nick");
   auth = { role: null, nick: "" };
   location.reload();
 }
 
-function enterApp() {
+async function enterApp() {
   document.getElementById("login-gate").style.display = "none";
   document.getElementById("app-shell").style.display = "block";
   document.getElementById("role-badge").textContent = auth.role === "mestre" ? `Mestre` : `Jogador: ${auth.nick}`;
@@ -805,8 +859,79 @@ function enterApp() {
   if (auth.role === "mestre") {
     switchTab("mestre");
   } else {
-    renderAll();
+    await loadHomeCharacterOrBlank();
   }
+}
+
+// ============ BLOQUEIO DE FICHA (só o mestre libera edição) ============
+function isSheetLocked() {
+  return auth.role === "jogador" && !!state.locked;
+}
+
+let lockWatchTimer = null;
+function startLockWatcher() {
+  stopLockWatcher();
+  if (auth.role !== "jogador" || !state.id) return;
+  lockWatchTimer = setInterval(async () => {
+    if (!state.id) { stopLockWatcher(); return; }
+    try {
+      const rows = await sbFetch(`characters?id=eq.${state.id}&select=locked`);
+      if (rows && rows.length && !!rows[0].locked !== !!state.locked) {
+        state.locked = !!rows[0].locked;
+        renderAll();
+        toast(state.locked ? "O mestre bloqueou sua ficha." : "O mestre liberou sua ficha para edição.");
+      }
+    } catch (e) { /* ignora falhas de poll */ }
+  }, 6000);
+}
+function stopLockWatcher() {
+  if (lockWatchTimer) clearInterval(lockWatchTimer);
+  lockWatchTimer = null;
+}
+
+function updateSaveButtonState() {
+  const btn = document.getElementById("save-char-btn");
+  if (btn) btn.disabled = isSheetLocked();
+}
+
+function renderLockBanner() {
+  const el = document.getElementById("panel-lock-banner");
+  if (!el) return;
+  if (isSheetLocked()) {
+    el.innerHTML = `<div class="lock-banner">🔒 Esta ficha está bloqueada pelo mestre. Peça a ele para liberar a edição para você poder alterá-la.</div>`;
+  } else if (auth.role === "jogador" && state.id) {
+    el.innerHTML = `<div class="lock-banner unlocked">🔓 Ficha liberada para edição. Ao salvar, ela volta a ficar bloqueada até o mestre liberar de novo.</div>`;
+  } else {
+    el.innerHTML = "";
+  }
+}
+
+async function loadHomeCharacterOrBlank() {
+  try {
+    const rows = await sbFetch(`characters?owner_nick=eq.${encodeURIComponent(auth.nick)}&select=id&order=updated_at.desc&limit=1`);
+    if (rows && rows.length) {
+      await loadCharacterInto(rows[0].id, { silent: true });
+      return;
+    }
+  } catch (e) { /* segue para ficha em branco */ }
+  renderAll();
+  switchTab("criar");
+}
+
+function startNewCharacter() {
+  if (!confirm("Começar uma nova ficha em branco? A ficha atual continua salva.")) return;
+  stopLockWatcher();
+  state = {
+    id: null,
+    name: "", profession: "", nationality: "", age: "", sex: "", employer: "Delta Green (encoberto)", education: "", appearance: "",
+    stats: { STR: 10, CON: 10, DEX: 10, INT: 10, POW: 10, CHA: 10 },
+    skills: {}, specialized: [], bondsList: [], bondsCount: 3, bonusPoints: 8, bonusSpent: {},
+    whyTrusted: "", whyAccepted: "", weapons: [], notes: "", sessionChecks: {}, locked: false, live: {},
+  };
+  resetSkillsToBase();
+  switchTab("criar");
+  renderAll();
+  toast("Nova ficha em branco.");
 }
 
 // ============ ESTADO ============
@@ -828,6 +953,7 @@ let state = {
   weapons: [],
   notes: "",
   sessionChecks: {}, // usado na aba de progressão
+  locked: false, // true = ficha bloqueada para edição pelo jogador até o mestre liberar
 };
 
 function resetSkillsToBase() {
@@ -973,6 +1099,7 @@ function buildPayload() {
     notes: state.notes,
     live: state.live,
     owner_nick: state.id ? undefined : auth.nick, // só define o dono na criação, nunca sobrescreve depois
+    locked: auth.role === "jogador" ? true : undefined, // ao salvar, o jogador bloqueia a própria ficha até o mestre liberar
   };
 }
 
@@ -983,17 +1110,21 @@ function stripUndefined(obj) {
 }
 
 async function saveCharacter() {
+  if (isSheetLocked()) { toast("Ficha bloqueada pelo mestre — peça liberação antes de salvar.", true); return; }
   const payload = stripUndefined(buildPayload());
   try {
     if (state.id) {
       payload.updated_at = new Date().toISOString();
       await sbFetch(`characters?id=eq.${state.id}`, { method: "PATCH", body: JSON.stringify(payload) });
-      toast("Ficha atualizada.");
+      toast("Ficha atualizada e bloqueada até o mestre liberar.");
     } else {
       const rows = await sbFetch("characters", { method: "POST", body: JSON.stringify(payload) });
       state.id = rows[0].id;
-      toast("Ficha salva.");
+      toast("Ficha salva e bloqueada até o mestre liberar.");
     }
+    if (auth.role === "jogador") state.locked = true;
+    renderAll();
+    startLockWatcher();
     loadCharacterList();
   } catch (e) {
     toast("Erro ao salvar: " + e.message, true);
@@ -1025,12 +1156,13 @@ async function loadCharacterList() {
   }
 }
 
-async function loadCharacterInto(id) {
+async function loadCharacterInto(id, opts = {}) {
   try {
     const rows = await sbFetch(`characters?id=eq.${id}&select=*`);
     if (!rows.length) return;
     const r = rows[0];
     state.id = r.id;
+    state.locked = !!r.locked;
     state.name = r.name || ""; state.profession = r.profession || ""; state.nationality = r.nationality || "";
     state.age = r.age || ""; state.sex = r.sex || ""; state.employer = r.employer || ""; state.education = r.education || "";
     state.appearance = r.appearance || "";
@@ -1049,7 +1181,12 @@ async function loadCharacterInto(id) {
     } : null;
     switchTab("criar");
     renderAll();
-    toast("Ficha carregada.");
+    if (!opts.silent) {
+      toast("Ficha carregada.");
+    } else if (state.locked) {
+      toast("Ficha bloqueada — peça ao mestre para liberar a edição.");
+    }
+    startLockWatcher();
   } catch (e) {
     toast("Erro ao carregar ficha: " + e.message, true);
   }
@@ -1097,7 +1234,7 @@ let masterEditsPending = {}; // id -> {hp,wp,san} otimista, sobrescreve o que ve
 async function loadMasterView() {
   const el = document.getElementById("master-list");
   try {
-    const rows = await sbFetch("characters?select=id,name,profession,stats,derived,skills,weapons,live,bonds,updated_at&order=name.asc");
+    const rows = await sbFetch("characters?select=id,name,profession,stats,derived,skills,weapons,live,bonds,updated_at,locked&order=name.asc");
     if (!rows.length) { el.innerHTML = `<p class="muted">Nenhuma ficha salva ainda.</p>`; return; }
     rows.forEach(r => { masterRowsCache[r.id] = r; });
     el.innerHTML = rows.map(r => renderMasterCard(r)).join("");
@@ -1126,6 +1263,8 @@ function renderMasterCard(r) {
       <div class="master-card-head">
         <strong>${escapeHtml(r.name || "(sem nome)")}</strong>
         <span class="muted small">${escapeHtml(r.profession || "")}</span>
+        <span class="master-lock-badge ${r.locked ? 'locked' : 'unlocked'}">${r.locked ? "🔒 Bloqueada" : "🔓 Liberada"}</span>
+        <button class="btn-small" data-master-lock data-id="${r.id}" data-locked="${r.locked ? 1 : 0}">${r.locked ? "Liberar edição" : "Bloquear"}</button>
         <span class="muted small master-ago">atualizado ${ago}</span>
       </div>
 
@@ -1210,6 +1349,11 @@ function bindMasterCardEvents() {
       masterAdjustLive(btn.dataset.id, btn.dataset.field, Number(btn.dataset.delta));
     });
   });
+  document.querySelectorAll("#master-list button[data-master-lock]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      masterToggleLock(btn.dataset.id, btn.dataset.locked === "1");
+    });
+  });
   document.querySelectorAll("#master-list .master-toggle-skills").forEach(btn => {
     btn.addEventListener("click", () => {
       const id = btn.dataset.id;
@@ -1249,6 +1393,24 @@ async function masterAdjustLive(id, field, delta) {
     delete masterEditsPending[id];
   } catch (e) {
     toast("Erro ao salvar PV/SAN: " + e.message, true);
+  }
+}
+
+async function masterToggleLock(id, currentlyLocked) {
+  const r = masterRowsCache[id];
+  if (!r) return;
+  const newVal = !currentlyLocked;
+  try {
+    await sbFetch(`characters?id=eq.${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ locked: newVal, updated_at: new Date().toISOString() }),
+    });
+    r.locked = newVal;
+    const card = document.querySelector(`#master-list .master-card[data-id="${id}"]`);
+    if (card) { card.outerHTML = renderMasterCard(r); bindMasterCardEvents(); }
+    toast(newVal ? "Ficha bloqueada." : "Ficha liberada para edição.");
+  } catch (e) {
+    toast("Erro ao alterar bloqueio: " + e.message, true);
   }
 }
 
@@ -1375,6 +1537,8 @@ function switchTab(tab) {
 // ============ RENDERIZAÇÃO ============
 
 function renderAll() {
+  renderLockBanner();
+  updateSaveButtonState();
   renderPersonal();
   renderStats();
   renderDerived();
@@ -1391,16 +1555,17 @@ function renderAll() {
 
 function renderPersonal() {
   const el = document.getElementById("panel-personal");
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
     <div class="field-grid">
-      <label>Nome<input type="text" id="f-name" value="${escapeHtml(state.name)}"></label>
-      <label>Nacionalidade<input type="text" id="f-nationality" value="${escapeHtml(state.nationality)}"></label>
-      <label>Idade<input type="text" id="f-age" value="${escapeHtml(state.age)}"></label>
-      <label>Sexo<input type="text" id="f-sex" value="${escapeHtml(state.sex)}" placeholder="F / M / outro"></label>
-      <label>Empregador<input type="text" id="f-employer" value="${escapeHtml(state.employer)}"></label>
-      <label>Educação / histórico ocupacional<input type="text" id="f-education" value="${escapeHtml(state.education)}"></label>
+      <label>Nome<input type="text" id="f-name" value="${escapeHtml(state.name)}" ${D}></label>
+      <label>Nacionalidade<input type="text" id="f-nationality" value="${escapeHtml(state.nationality)}" ${D}></label>
+      <label>Idade<input type="text" id="f-age" value="${escapeHtml(state.age)}" ${D}></label>
+      <label>Sexo<input type="text" id="f-sex" value="${escapeHtml(state.sex)}" placeholder="F / M / outro" ${D}></label>
+      <label>Empregador<input type="text" id="f-employer" value="${escapeHtml(state.employer)}" ${D}></label>
+      <label>Educação / histórico ocupacional<input type="text" id="f-education" value="${escapeHtml(state.education)}" ${D}></label>
     </div>
-    <label>Descrição física<textarea id="f-appearance" rows="2">${escapeHtml(state.appearance)}</textarea></label>
+    <label>Descrição física<textarea id="f-appearance" rows="2" ${D}>${escapeHtml(state.appearance)}</textarea></label>
   `;
   bindInput("f-name", v => state.name = v);
   bindInput("f-nationality", v => state.nationality = v);
@@ -1420,6 +1585,7 @@ function bindInput(id, setter) {
 function renderStats() {
   const el = document.getElementById("panel-stats");
   const total = pointsBuyTotal();
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
     <div class="stats-header">
       <span>Distribua os atributos (referência: 72 pontos no total)</span>
@@ -1429,7 +1595,7 @@ function renderStats() {
       ${STAT_NAMES.map(([code, label]) => `
         <label class="stat-field">
           <span>${label} (${code})</span>
-          <input type="number" min="3" max="18" id="stat-${code}" value="${state.stats[code]}">
+          <input type="number" min="3" max="18" id="stat-${code}" value="${state.stats[code]}" ${D}>
         </label>
       `).join("")}
     </div>
@@ -1492,9 +1658,10 @@ function renderLive() {
 
 function renderProfessionSelect() {
   const el = document.getElementById("panel-profession");
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
     <label>Profissão
-      <select id="f-profession">
+      <select id="f-profession" ${D}>
         <option value="">— escolher —</option>
         ${PROFESSIONS.map(p => `<option value="${escapeHtml(p.name)}" ${state.profession === p.name ? "selected" : ""}>${escapeHtml(p.name)}</option>`).join("")}
       </select>
@@ -1516,13 +1683,14 @@ function renderChooseGroups() {
   const el = document.getElementById("panel-choose");
   const prof = state.selectedProf;
   if (!prof || !prof.chooseGroups || !prof.chooseGroups.length) { el.innerHTML = ""; return; }
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = prof.chooseGroups.map((g, gi) => `
     <div class="choose-group">
       <div class="choose-title">Escolha ${g.n} entre:</div>
       <div class="choose-options">
         ${g.options.map(([name, val], oi) => `
           <label class="choose-opt">
-            <input type="checkbox" data-gi="${gi}" data-oi="${oi}" ${g.picked.includes(oi) ? "checked" : ""}>
+            <input type="checkbox" data-gi="${gi}" data-oi="${oi}" ${g.picked.includes(oi) ? "checked" : ""} ${D}>
             ${escapeHtml(name)} ${val}%
           </label>
         `).join("")}
@@ -1559,6 +1727,7 @@ function renderChooseGroups() {
 function renderSkills() {
   const el = document.getElementById("panel-skills");
   const spent = bonusSpentTotal();
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
     <div class="skills-header">
       <span>Perícias</span>
@@ -1577,8 +1746,8 @@ function renderSkills() {
           <span class="skill-bonus">${bonus > 0 ? "+" + bonus * 20 + "%" : ""}</span>
           <span class="skill-final">${final}%</span>
           ${disabled ? "" : `
-            <button class="btn-tiny" data-act="minus" data-name="${escapeHtml(name)}">−</button>
-            <button class="btn-tiny" data-act="plus" data-name="${escapeHtml(name)}">+</button>
+            <button class="btn-tiny" data-act="minus" data-name="${escapeHtml(name)}" ${D}>−</button>
+            <button class="btn-tiny" data-act="plus" data-name="${escapeHtml(name)}" ${D}>+</button>
           `}
         </div>`;
       }).join("")}
@@ -1596,20 +1765,21 @@ function renderSpecialized() {
   const el = document.getElementById("panel-specialized");
   if (!el) return;
   if (!state.specialized.length) { el.innerHTML = `<p class="muted small">Nenhuma perícia especializada ainda (aparecem aqui idiomas, ciências, ofícios, etc. conforme a profissão).</p>`; return; }
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
     <div class="skills-table">
       ${state.specialized.map((s, i) => `
         <div class="skill-row specialized-row">
-          <select class="spec-group" data-i="${i}">
+          <select class="spec-group" data-i="${i}" ${D}>
             ${SPECIALIZABLE.map(g => `<option value="${g}" ${g === s.group ? "selected" : ""}>${g}</option>`).join("")}
           </select>
-          <input type="text" class="spec-label" data-i="${i}" placeholder="especificar (ex: Russo, Física...)" value="${escapeHtml(s.label)}">
-          <input type="number" class="spec-value" data-i="${i}" value="${s.value}">
-          <button class="btn-tiny" data-i="${i}" data-act="remove-spec">×</button>
+          <input type="text" class="spec-label" data-i="${i}" placeholder="especificar (ex: Russo, Física...)" value="${escapeHtml(s.label)}" ${D}>
+          <input type="number" class="spec-value" data-i="${i}" value="${s.value}" ${D}>
+          <button class="btn-tiny" data-i="${i}" data-act="remove-spec" ${D}>×</button>
         </div>
       `).join("")}
     </div>
-    <button class="btn-small" id="add-spec-btn">+ adicionar especialização</button>
+    <button class="btn-small" id="add-spec-btn" ${D}>+ adicionar especialização</button>
   `;
   el.querySelectorAll(".spec-group").forEach(sel => {
     sel.addEventListener("change", (e) => { state.specialized[e.target.dataset.i].group = e.target.value; });
@@ -1633,30 +1803,40 @@ function renderSpecialized() {
 function renderWeapons() {
   const el = document.getElementById("panel-weapons");
   if (!el) return;
+  const D = isSheetLocked() ? "disabled" : "";
+  const pickerHtml = `
+    <div class="weapon-picker-row">
+      <select id="weapon-picker" ${D}>
+        ${WEAPON_PRESETS.map(g => `<optgroup label="${escapeHtml(g.group)}">${g.items.map((it, i) => `<option value="${g.group}::${i}">${escapeHtml(it.name)}</option>`).join("")}</optgroup>`).join("")}
+      </select>
+      <button class="btn-small" id="weapon-picker-add" ${D}>+ adicionar da lista</button>
+      <button class="btn-small" id="add-weapon-btn" ${D}>+ arma personalizada</button>
+    </div>
+    <p class="muted small">Valores de dano são referência — ajuste com o mestre conforme a arma exata. Em armas corpo a corpo/desarmado, some seu dano bônus.</p>
+  `;
   if (!state.weapons.length) {
-    el.innerHTML = `<p class="muted small">Nenhuma arma cadastrada ainda.</p><button class="btn-small" id="add-weapon-btn">+ adicionar arma</button>`;
+    el.innerHTML = pickerHtml + `<p class="muted small">Nenhuma arma cadastrada ainda.</p>`;
   } else {
-    el.innerHTML = `
+    el.innerHTML = pickerHtml + `
       <div class="skills-table">
         <div class="weapon-row weapon-head">
           <span>Nome</span><span>Perícia</span><span>Dano</span><span>Tipo de dano</span><span>Letalidade %</span><span></span>
         </div>
         ${state.weapons.map((w, i) => `
           <div class="weapon-row">
-            <input type="text" class="wpn-name" data-i="${i}" placeholder="Nome da arma" value="${escapeHtml(w.name || "")}">
-            <select class="wpn-skill" data-i="${i}">
+            <input type="text" class="wpn-name" data-i="${i}" placeholder="Nome da arma" value="${escapeHtml(w.name || "")}" ${D}>
+            <select class="wpn-skill" data-i="${i}" ${D}>
               ${COMBAT_SKILLS.map(s => `<option value="${s}" ${s === w.skill ? "selected" : ""}>${s}</option>`).join("")}
             </select>
-            <input type="text" class="wpn-damage" data-i="${i}" placeholder="ex: 2d6+2" value="${escapeHtml(w.damage || "")}">
-            <select class="wpn-type" data-i="${i}">
+            <input type="text" class="wpn-damage" data-i="${i}" placeholder="ex: 2d6+2" value="${escapeHtml(w.damage || "")}" ${D}>
+            <select class="wpn-type" data-i="${i}" ${D}>
               ${DAMAGE_TYPES.map(t => `<option value="${t}" ${t === w.damageType ? "selected" : ""}>${t}</option>`).join("")}
             </select>
-            <input type="number" class="wpn-lethality" data-i="${i}" placeholder="opcional" value="${w.lethality ?? ""}">
-            <button class="btn-tiny" data-i="${i}" data-act="remove-weapon">×</button>
+            <input type="number" class="wpn-lethality" data-i="${i}" placeholder="opcional" value="${w.lethality ?? ""}" ${D}>
+            <button class="btn-tiny" data-i="${i}" data-act="remove-weapon" ${D}>×</button>
           </div>
         `).join("")}
       </div>
-      <button class="btn-small" id="add-weapon-btn">+ adicionar arma</button>
     `;
   }
   el.querySelectorAll(".wpn-name").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].name = e.target.value; }));
@@ -1670,18 +1850,29 @@ function renderWeapons() {
     state.weapons.push({ name: "", skill: COMBAT_SKILLS[0], damage: "", damageType: DAMAGE_TYPES[0], lethality: null });
     renderWeapons();
   });
+  const pickBtn = document.getElementById("weapon-picker-add");
+  if (pickBtn) pickBtn.addEventListener("click", () => {
+    const picker = document.getElementById("weapon-picker");
+    const [gname, idx] = picker.value.split("::");
+    const grp = WEAPON_PRESETS.find(g => g.group === gname);
+    const item = grp && grp.items[Number(idx)];
+    if (!item) return;
+    state.weapons.push({ name: item.name, skill: item.skill, damage: item.damage, damageType: item.damageType, lethality: item.lethality });
+    renderWeapons();
+  });
 }
 
 function renderBonds() {
   const el = document.getElementById("panel-bonds");
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
     <div class="bonds-header">
       <span>Vínculos Pessoais (Bonds) — valor inicial = CHA (${state.stats.CHA})</span>
     </div>
     ${state.bondsList.map((b, i) => `
       <div class="bond-row">
-        <input type="text" placeholder="Nome do vínculo" value="${escapeHtml(b.name)}" data-i="${i}" class="bond-name">
-        <input type="number" value="${b.value}" data-i="${i}" class="bond-value">
+        <input type="text" placeholder="Nome do vínculo" value="${escapeHtml(b.name)}" data-i="${i}" class="bond-name" ${D}>
+        <input type="number" value="${b.value}" data-i="${i}" class="bond-value" ${D}>
       </div>
     `).join("")}
   `;
@@ -1698,15 +1889,16 @@ function renderBonds() {
 
 function renderMotivations() {
   const el = document.getElementById("panel-motivations");
+  const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
     <label>Por que a Delta Green confia nele
-      <textarea id="f-trusted" rows="3">${escapeHtml(state.whyTrusted)}</textarea>
+      <textarea id="f-trusted" rows="3" ${D}>${escapeHtml(state.whyTrusted)}</textarea>
     </label>
     <label>Por que ele aceita o risco
-      <textarea id="f-accepted" rows="3">${escapeHtml(state.whyAccepted)}</textarea>
+      <textarea id="f-accepted" rows="3" ${D}>${escapeHtml(state.whyAccepted)}</textarea>
     </label>
     <label>Notas / equipamento
-      <textarea id="f-notes" rows="2">${escapeHtml(state.notes)}</textarea>
+      <textarea id="f-notes" rows="2" ${D}>${escapeHtml(state.notes)}</textarea>
     </label>
   `;
   bindInput("f-trusted", v => state.whyTrusted = v);
