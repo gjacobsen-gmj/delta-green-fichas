@@ -93,8 +93,8 @@
   .sheet {
     position: relative;
     background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 0 8px 8px 8px;
+    border: 1px solid var(--ink);
+    border-radius: 0;
     padding: 24px;
     box-shadow: 0 6px 24px rgba(0,0,0,0.08);
   }
@@ -123,22 +123,70 @@
   #panel-mestre .sheet > *, #panel-batalha .sheet > * { position: relative; z-index: 1; }
 
   .section {
-    margin-bottom: 22px;
-    padding-bottom: 18px;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
     border-bottom: 1px dashed var(--line);
   }
-  .section:last-child { border-bottom: none; }
+  .section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
   .section-title {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 700;
     letter-spacing: 1.5px;
-    color: #fff;
-    background: var(--black-bar);
-    display: inline-block;
-    padding: 4px 10px;
-    margin-bottom: 12px;
-    border-radius: 3px;
+    text-transform: uppercase;
+    color: var(--ink);
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 4px 8px;
+    margin: 0 0 12px;
   }
+
+  /* ===== BLOCOS COM RÓTULO LATERAL (estilo formulário DD 315) ===== */
+  .form-group {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid var(--ink);
+    margin-bottom: 18px;
+  }
+  .form-group-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    background: var(--black-bar);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 2px;
+    font-size: 11.5px;
+    text-align: center;
+    padding: 14px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .form-group-body { flex: 1; min-width: 0; padding: 16px 18px 4px; }
+  .form-group-body .section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  @media (max-width: 640px) {
+    .form-group { flex-direction: column; }
+    .form-group-label {
+      writing-mode: horizontal-tb; transform: none; text-align: left;
+      padding: 6px 12px;
+    }
+    .form-group-body { padding: 14px; }
+  }
+
+  /* ===== RODAPÉ ESTILO FORMULÁRIO DD 315 ===== */
+  .form-footer {
+    max-width: 980px; margin: 0 auto 40px; padding: 0 16px;
+  }
+  .form-footer-bar {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--black-bar); color: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 8px 16px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.5px;
+  }
+  .form-footer-bar .ff-tag { font-weight: 700; letter-spacing: 2px; color: var(--red-bright); }
+  .form-footer-bar .ff-center { text-align: center; flex: 1; color: #b8b2a0; }
+  .form-footer-bar .ff-num { font-weight: 700; }
 
   label { display: block; font-size: 12.5px; color: var(--ink-soft); margin-bottom: 10px; }
   input[type=text], input[type=number], textarea, select {
@@ -189,18 +237,23 @@
   @media (max-width: 640px) { .choose-options { grid-template-columns: 1fr; } }
   .choose-opt { font-size: 13px; display: flex; align-items: center; gap: 6px; }
 
-  .skills-table { display: flex; flex-direction: column; gap: 2px; max-height: 480px; overflow-y: auto; padding-right: 4px; }
+  .skills-table { columns: 3; column-gap: 10px; max-height: 620px; overflow-y: auto; padding-right: 4px; }
+  @media (max-width: 900px) { .skills-table { columns: 2; } }
+  @media (max-width: 560px) { .skills-table { columns: 1; } }
   .skill-row {
     display: grid;
+    break-inside: avoid;
     grid-template-columns: 1.6fr 0.5fr 0.6fr 0.6fr auto auto;
     align-items: center;
     gap: 6px;
-    padding: 5px 8px;
-    border-radius: 4px;
-    font-size: 13px;
+    padding: 4px 6px;
+    border-radius: 0;
+    font-size: 12.5px;
+    border-bottom: 1px dotted var(--line);
   }
-  .skill-row:nth-child(odd) { background: var(--paper); }
+  .skill-row:nth-child(odd) { background: transparent; }
   .skill-row.disabled { opacity: 0.45; }
+  .specialized-table { display: flex; flex-direction: column; gap: 2px; }
   .skill-name { font-weight: 500; }
   .skill-base, .skill-bonus, .skill-final { font-family: 'IBM Plex Mono', monospace; text-align: right; }
   .skill-bonus { color: var(--red-bright); }
@@ -216,25 +269,28 @@
   .specialized-row { grid-template-columns: 1fr 1.4fr 70px auto !important; }
   .specialized-row select, .specialized-row input { font-size: 12.5px; padding: 4px 6px; margin: 0; }
 
-  .weapon-row {
-    display: grid; grid-template-columns: 1.3fr 1.2fr 0.9fr 1fr 0.8fr auto;
-    gap: 6px; align-items: center; padding: 5px 8px; border-radius: 4px; font-size: 12.5px;
+  .weapon-list { display: flex; flex-direction: column; gap: 8px; }
+  .weapon-card { background: #fff; border: 1px solid var(--ink); padding: 8px 10px; }
+  .weapon-row-main { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .weapon-row-main .wpn-name { flex: 1.6; font-weight: 600; margin: 0; }
+  .weapon-row-main .wpn-skill { flex: 1; margin: 0; }
+  .weapon-row-main input, .weapon-row-main select { font-size: 13px; padding: 5px 7px; }
+
+  .weapon-stat-row {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px;
+    background: var(--line); border: 1px solid var(--line);
   }
-  .weapon-row.weapon-head { font-weight: 700; color: var(--ink-soft); font-size: 11px; }
-  .weapon-row select, .weapon-row input { font-size: 12.5px; padding: 4px 6px; margin: 0; }
+  @media (max-width: 760px) { .weapon-stat-row { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 460px) { .weapon-stat-row { grid-template-columns: repeat(2, 1fr); } }
+  .weapon-stat { background: var(--paper); padding: 5px 6px; display: flex; flex-direction: column; gap: 2px; }
+  .weapon-stat label { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-soft); margin: 0; }
+  .weapon-stat strong { font-family: 'IBM Plex Mono', monospace; font-size: 14px; }
+  .weapon-stat input { font-size: 12px; padding: 3px 5px; margin: 0; background: #fff; }
 
-  .weapon-list { display: flex; flex-direction: column; gap: 6px; }
-  .weapon-card { background: var(--paper); border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; }
-  .weapon-card .weapon-row { padding: 0 0 6px; background: transparent; }
-  .weapon-extra-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  @media (max-width: 640px) { .weapon-extra-row { grid-template-columns: 1fr 1fr; } }
-  .weapon-extra-row label { font-size: 10.5px; color: var(--ink-soft); margin: 0; }
-  .weapon-extra-row input { font-size: 12px; padding: 4px 6px; margin-top: 2px; }
-
-  .weapon-threshold-table { margin-top: 10px; border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .weapon-threshold-table { margin-top: 10px; border: 1px solid var(--ink); overflow-x: auto; }
   .weapon-threshold-row {
-    display: grid; grid-template-columns: 1.3fr 1.1fr 1fr 1fr 0.8fr 0.8fr 0.8fr;
-    padding: 5px 10px; font-size: 12.5px; border-bottom: 1px solid var(--line);
+    display: grid; grid-template-columns: 1fr 1.2fr 0.6fr 0.8fr 0.8fr 0.8fr 0.8fr 0.6fr 0.8fr;
+    padding: 5px 10px; font-size: 12px; border-bottom: 1px solid var(--line); min-width: 640px;
   }
   .weapon-threshold-row:last-child { border-bottom: none; }
   .weapon-threshold-row:nth-child(even) { background: var(--paper); }
@@ -480,61 +536,88 @@
       <div id="panel-lock-banner"></div>
       <div class="summary-box" id="panel-summary"></div>
 
-      <div class="section">
-        <div class="section-title">1. Dados Pessoais</div>
-        <div id="panel-personal"></div>
+      <div class="form-group">
+        <div class="form-group-label">Dados Pessoais</div>
+        <div class="form-group-body">
+          <div class="section">
+            <div class="section-title">1. Dados Pessoais</div>
+            <div id="panel-personal"></div>
+          </div>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">2. Estatísticas</div>
-        <div id="panel-stats"></div>
+      <div class="form-group">
+        <div class="form-group-label">Dados Estatísticos</div>
+        <div class="form-group-body">
+          <div class="section">
+            <div class="section-title">2. Estatísticas</div>
+            <div id="panel-stats"></div>
+          </div>
+          <div class="section">
+            <div class="section-title">3. Atributos Derivados</div>
+            <div id="panel-derived"></div>
+          </div>
+          <div class="section">
+            <div class="section-title">3b. Estado Atual (em jogo)</div>
+            <div id="panel-live"></div>
+          </div>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">3. Atributos Derivados</div>
-        <div id="panel-derived"></div>
+      <div class="form-group">
+        <div class="form-group-label">Conjuntos de Habilidades</div>
+        <div class="form-group-body">
+          <div class="section">
+            <div class="section-title">4. Profissão</div>
+            <div id="panel-profession"></div>
+            <div id="panel-choose"></div>
+          </div>
+          <div class="section">
+            <div class="section-title">5. Perícias Aplicáveis</div>
+            <div id="panel-skills"></div>
+          </div>
+          <div class="section">
+            <div class="section-title">5b. Perícias Especializadas (idiomas, ciências, ofícios...)</div>
+            <div id="panel-specialized"></div>
+          </div>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">3b. Estado Atual (em jogo)</div>
-        <div id="panel-live"></div>
+      <div class="form-group">
+        <div class="form-group-label">Dados Psicológicos</div>
+        <div class="form-group-body">
+          <div class="section">
+            <div class="section-title">6. Vínculos Pessoais</div>
+            <div id="panel-bonds"></div>
+          </div>
+          <div class="section">
+            <div class="section-title">7. Motivações</div>
+            <div id="panel-motivations"></div>
+          </div>
+        </div>
       </div>
 
-      <div class="section">
-        <div class="section-title">4. Profissão</div>
-        <div id="panel-profession"></div>
-        <div id="panel-choose"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">5. Perícias</div>
-        <div id="panel-skills"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">5b. Perícias Especializadas (idiomas, ciências, ofícios...)</div>
-        <div id="panel-specialized"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">6. Vínculos Pessoais</div>
-        <div id="panel-bonds"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">6b. Armas</div>
-        <div id="panel-weapons"></div>
-      </div>
-
-      <div class="section">
-        <div class="section-title">7. Motivações</div>
-        <div id="panel-motivations"></div>
+      <div class="form-group">
+        <div class="form-group-label">Equipamento</div>
+        <div class="form-group-body">
+          <div class="section">
+            <div class="section-title">8. Armas</div>
+            <div id="panel-weapons"></div>
+          </div>
+        </div>
       </div>
 
       <div class="save-bar">
         <button class="btn-primary" id="save-char-btn" onclick="saveCharacter()">Salvar Ficha</button>
         <button class="btn-small" onclick="startNewCharacter()">Nova Ficha</button>
       </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <div class="form-footer-bar">
+      <span class="ff-tag">DD FORMULÁRIO 315</span>
+      <span class="ff-center">CONFIDENCIAL // ACESSO ESPECIAL NECESSÁRIO — FORÇA TAREFA S.A.C.I. · FOLHA DE DOCUMENTAÇÃO DO AGENTE</span>
+      <span class="ff-num" id="form-footer-num">000000</span>
     </div>
   </div>
 
@@ -561,6 +644,11 @@
         <span class="muted small" id="master-status">atualizando automaticamente a cada 4s</span>
       </div>
       <div id="master-list"></div>
+
+      <div class="section" style="margin-top:28px;">
+        <div class="section-title">Arsenal — Todas as Armas em Campo</div>
+        <div id="master-arsenal"></div>
+      </div>
     </div>
   </div>
 
@@ -884,37 +972,37 @@ const PROFESSIONS = [
 // Lista de armas de referência p/ o seletor rápido da seção 6b (valores de referência — ajustar com o mestre)
 const WEAPON_PRESETS = [
   { group: "Armas Curtas de Fogo", items: [
-    { name: "Pistola 9mm (ex: Glock 17)", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "15+1", notes: "" },
-    { name: "Pistola .45 (ex: Colt 1911)", skill: "Armas de Fogo", damage: "1D10+2", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "7+1", notes: "" },
-    { name: "Revólver .38 Special", skill: "Armas de Fogo", damage: "1D10", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "6", notes: "" },
-    { name: "Revólver .44 Magnum", skill: "Armas de Fogo", damage: "1D12+2", damageType: "Balístico", lethality: null, range: "15m", rof: "3/rodada", capacity: "6", notes: "" },
-    { name: "Pistola .50 AE (Desert Eagle)", skill: "Armas de Fogo", damage: "2D6", damageType: "Balístico", lethality: 10, range: "15m", rof: "3/rodada", capacity: "7+1", notes: "Letalidade só se alvo a curta distância" },
+    { name: "Pistola 9mm (ex: Glock 17)", skill: "Armas de Fogo", damage: "1D10", perforation: "—", lethality: null, range: "15m", radius: "—", ammo: "15+1" },
+    { name: "Pistola .45 (ex: Colt 1911)", skill: "Armas de Fogo", damage: "1D10+2", perforation: "—", lethality: null, range: "15m", radius: "—", ammo: "7+1" },
+    { name: "Revólver .38 Special", skill: "Armas de Fogo", damage: "1D10", perforation: "—", lethality: null, range: "15m", radius: "—", ammo: "6" },
+    { name: "Revólver .44 Magnum", skill: "Armas de Fogo", damage: "1D12+2", perforation: "-1", lethality: null, range: "15m", radius: "—", ammo: "6" },
+    { name: "Pistola .50 AE (Desert Eagle)", skill: "Armas de Fogo", damage: "2D6", perforation: "-1", lethality: 10, range: "15m", radius: "—", ammo: "7+1" },
   ]},
   { group: "Fuzis e Carabinas", items: [
-    { name: "Fuzil de assalto (AK-47 / AR-15)", skill: "Armas de Fogo", damage: "2D6+1", damageType: "Balístico", lethality: null, range: "90m", rof: "1 ou rajada (3 tiros)", capacity: "30", notes: "Rajada: -20% no ataque, pode acertar múltiplos alvos" },
-    { name: "Carabina de caça .30-06 (ferrolho)", skill: "Armas de Fogo", damage: "2D6+2", damageType: "Balístico", lethality: 10, range: "90m", rof: "1/rodada", capacity: "4–5", notes: "Letalidade só se alvo a curta distância" },
-    { name: "Fuzil de precisão (.308, com mira)", skill: "Armas de Fogo", damage: "2D6+3", damageType: "Balístico", lethality: 10, range: "150m+", rof: "1/rodada", capacity: "5–10", notes: "Mira telescópica: bônus em alvos parados a longa distância" },
+    { name: "Fuzil de assalto (AK-47 / AR-15)", skill: "Armas de Fogo", damage: "2D6+1", perforation: "-2", lethality: null, range: "90m", radius: "—", ammo: "30" },
+    { name: "Carabina de caça .30-06 (ferrolho)", skill: "Armas de Fogo", damage: "2D6+2", perforation: "-2", lethality: 10, range: "90m", radius: "—", ammo: "4–5" },
+    { name: "Fuzil de precisão (.308, com mira)", skill: "Armas de Fogo", damage: "2D6+3", perforation: "-3", lethality: 10, range: "150m+", radius: "—", ammo: "5–10" },
   ]},
   { group: "Submetralhadoras", items: [
-    { name: "Submetralhadora 9mm (ex: MP5/Uzi)", skill: "Armas de Fogo", damage: "1D8", damageType: "Balístico", lethality: null, range: "25m", rof: "1 ou automático", capacity: "30–32", notes: "Automático: pode disparar rajadas longas, gasta munição rápido" },
+    { name: "Submetralhadora 9mm (ex: MP5/Uzi)", skill: "Armas de Fogo", damage: "1D8", perforation: "—", lethality: null, range: "25m", radius: "—", ammo: "30–32" },
   ]},
   { group: "Espingardas", items: [
-    { name: "Espingarda calibre 12 (pump-action)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 15, range: "10m", rof: "1/rodada", capacity: "5–8", notes: "Dano cai para 2D6 além do alcance curto" },
-    { name: "Espingarda calibre 12 (cano serrado)", skill: "Armas de Fogo", damage: "4D6", damageType: "Balístico", lethality: 20, range: "5m", rof: "1 ou 2 (dois canos)", capacity: "2", notes: "Alcance bem curto, alta letalidade" },
+    { name: "Espingarda calibre 12 (pump-action)", skill: "Armas de Fogo", damage: "4D6", perforation: "—", lethality: 15, range: "10m", radius: "—", ammo: "5–8" },
+    { name: "Espingarda calibre 12 (cano serrado)", skill: "Armas de Fogo", damage: "4D6", perforation: "—", lethality: 20, range: "5m", radius: "—", ammo: "2" },
   ]},
   { group: "Armas Pesadas", items: [
-    { name: "Metralhadora leve (LMG, ex: M249)", skill: "Armas Pesadas", damage: "2D6+1", damageType: "Balístico", lethality: null, range: "90m", rof: "Automático", capacity: "100–200 (correia)", notes: "Suprimir área; costuma exigir bipé ou apoio" },
-    { name: "Lança-granadas / RPG", skill: "Armas Pesadas", damage: "6D10", damageType: "Explosivo", lethality: 30, range: "100m+", rof: "1/rodada (recarga lenta)", capacity: "1", notes: "Raio de explosão ≈ 4m; risco também para quem disparou se muito perto" },
-    { name: "Granada de fragmentação", skill: "Armas Pesadas", damage: "4D6", damageType: "Explosivo", lethality: 15, range: "Arremesso (força do agente)", rof: "1/rodada", capacity: "1 (uso único)", notes: "Raio de explosão ≈ 3m; detona 1D4 rodadas após o arremesso" },
+    { name: "Metralhadora leve (LMG, ex: M249)", skill: "Armas Pesadas", damage: "2D6+1", perforation: "-2", lethality: null, range: "90m", radius: "—", ammo: "100–200" },
+    { name: "Lança-granadas / RPG", skill: "Armas Pesadas", damage: "6D10", perforation: "-4", lethality: 30, range: "100m+", radius: "4m", ammo: "1" },
+    { name: "Granada de fragmentação", skill: "Armas Pesadas", damage: "4D6", perforation: "-2", lethality: 15, range: "arremesso", radius: "3m", ammo: "1" },
   ]},
   { group: "Corpo a Corpo", items: [
-    { name: "Faca / adaga", skill: "Armas Corpo a Corpo", damage: "1D4", damageType: "Cortante", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
-    { name: "Machado", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Cortante", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
-    { name: "Cassetete / bastão", skill: "Armas Corpo a Corpo", damage: "1D6", damageType: "Contundente", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
-    { name: "Taco de beisebol", skill: "Armas Corpo a Corpo", damage: "1D8", damageType: "Contundente", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
+    { name: "Faca / adaga", skill: "Armas Corpo a Corpo", damage: "1D4", perforation: "—", lethality: null, range: "corpo a corpo", radius: "—", ammo: "—" },
+    { name: "Machado", skill: "Armas Corpo a Corpo", damage: "1D6", perforation: "—", lethality: null, range: "corpo a corpo", radius: "—", ammo: "—" },
+    { name: "Cassetete / bastão", skill: "Armas Corpo a Corpo", damage: "1D6", perforation: "—", lethality: null, range: "corpo a corpo", radius: "—", ammo: "—" },
+    { name: "Taco de beisebol", skill: "Armas Corpo a Corpo", damage: "1D8", perforation: "—", lethality: null, range: "corpo a corpo", radius: "—", ammo: "—" },
   ]},
   { group: "Desarmado", items: [
-    { name: "Golpe desarmado (soco/chute)", skill: "Combate Desarmado", damage: "1D4", damageType: "Contundente", lethality: null, range: "Corpo a corpo", rof: "1/rodada", capacity: "—", notes: "Some o dano bônus (STR/CON) ao dano" },
+    { name: "Golpe desarmado (soco/chute)", skill: "Combate Desarmado", damage: "1D4", perforation: "—", lethality: null, range: "corpo a corpo", radius: "—", ammo: "—" },
   ]},
 ];
 
@@ -982,6 +1070,15 @@ async function enterApp() {
 }
 
 // ============ BLOQUEIO DE FICHA (só o mestre libera edição) ============
+function updateFormFooterNum() {
+  const el = document.getElementById("form-footer-num");
+  if (!el) return;
+  if (!state.id) { el.textContent = "000000"; return; }
+  let h = 0;
+  for (const ch of state.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  el.textContent = String(h % 900000 + 100000);
+}
+
 function isSheetLocked() {
   return auth.role === "jogador" && !!state.locked;
 }
@@ -1353,13 +1450,52 @@ async function loadMasterView() {
   const el = document.getElementById("master-list");
   try {
     const rows = await sbFetch("characters?select=id,name,profession,stats,derived,skills,weapons,live,bonds,updated_at,locked&order=name.asc");
-    if (!rows.length) { el.innerHTML = `<p class="muted">Nenhuma ficha salva ainda.</p>`; return; }
+    if (!rows.length) {
+      el.innerHTML = `<p class="muted">Nenhuma ficha salva ainda.</p>`;
+      renderArsenal([]);
+      return;
+    }
     rows.forEach(r => { masterRowsCache[r.id] = r; });
     el.innerHTML = rows.map(r => renderMasterCard(r)).join("");
     bindMasterCardEvents();
+    renderArsenal(rows);
   } catch (e) {
     el.innerHTML = `<p class="muted">Erro ao carregar: ${escapeHtml(e.message)}</p>`;
   }
+}
+
+function renderArsenal(rows) {
+  const el = document.getElementById("master-arsenal");
+  if (!el) return;
+  const entries = [];
+  rows.forEach(r => {
+    (r.weapons || []).filter(w => w.name).forEach(w => {
+      const val = (r.skills || {})[w.skill] || 0;
+      entries.push({ owner: r.name || "(sem nome)", w, val });
+    });
+  });
+  if (!entries.length) { el.innerHTML = `<p class="muted small">Nenhuma arma cadastrada em nenhuma ficha ainda.</p>`; return; }
+  entries.sort((a, b) => a.owner.localeCompare(b.owner) || a.w.name.localeCompare(b.w.name));
+  el.innerHTML = `
+    <div class="weapon-threshold-table">
+      <div class="weapon-threshold-row weapon-threshold-head">
+        <span>Personagem</span><span>Arma</span><span>Hab. %</span><span>Alcance</span><span>Dano</span><span>Perfuração</span><span>Letalidade %</span><span>Raio</span><span>Munição</span>
+      </div>
+      ${entries.map(({ owner, w, val }) => `
+        <div class="weapon-threshold-row">
+          <span>${escapeHtml(owner)}</span>
+          <span>${escapeHtml(w.name)}</span>
+          <span>${val}%</span>
+          <span>${escapeHtml(w.range || "—")}</span>
+          <span>${escapeHtml(w.damage || "—")}</span>
+          <span>${escapeHtml(w.perforation || "—")}</span>
+          <span>${w.lethality ? w.lethality + "%" : "—"}</span>
+          <span>${escapeHtml(w.radius || "—")}</span>
+          <span>${escapeHtml(w.ammo || "—")}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
 }
 
 function renderMasterCard(r) {
@@ -1425,17 +1561,16 @@ function renderWeaponThresholds(weapons, skills) {
           <div class="weapon-master-card">
             <div class="weapon-master-head">
               <strong>${escapeHtml(w.name)}</strong>
-              <span class="muted small">${escapeHtml(w.skill || "—")} (${val}%)</span>
+              <span class="muted small">${escapeHtml(w.skill || "—")} — Hab. ${val}%</span>
             </div>
             <div class="weapon-master-stats">
-              <span><b>Dano:</b> ${escapeHtml(w.damage || "—")}</span>
-              <span><b>Tipo:</b> ${escapeHtml(w.damageType || "—")}</span>
-              <span><b>Letalidade:</b> ${w.lethality ? w.lethality + "%" : "—"}</span>
               <span><b>Alcance:</b> ${escapeHtml(w.range || "—")}</span>
-              <span><b>Cadência:</b> ${escapeHtml(w.rof || "—")}</span>
-              <span><b>Capacidade:</b> ${escapeHtml(w.capacity || "—")}</span>
+              <span><b>Dano:</b> ${escapeHtml(w.damage || "—")}</span>
+              <span><b>Perfuração:</b> ${escapeHtml(w.perforation || "—")}</span>
+              <span><b>Letalidade:</b> ${w.lethality ? w.lethality + "%" : "—"}</span>
+              <span><b>Raio:</b> ${escapeHtml(w.radius || "—")}</span>
+              <span><b>Munição:</b> ${escapeHtml(w.ammo || "—")}</span>
             </div>
-            ${w.notes ? `<div class="weapon-master-notes small muted"><b>Obs.:</b> ${escapeHtml(w.notes)}</div>` : ""}
             <div class="weapon-master-thresholds small">
               Regular ≤ <strong>${val}</strong> · Difícil ≤ <strong>${Math.floor(val / 2)}</strong> · Extremo ≤ <strong>${Math.floor(val / 5)}</strong>
             </div>
@@ -1959,6 +2094,7 @@ function switchTab(tab) {
 function renderAll() {
   renderLockBanner();
   updateSaveButtonState();
+  updateFormFooterNum();
   renderPersonal();
   renderStats();
   renderDerived();
@@ -2187,7 +2323,7 @@ function renderSpecialized() {
   if (!state.specialized.length) { el.innerHTML = `<p class="muted small">Nenhuma perícia especializada ainda (aparecem aqui idiomas, ciências, ofícios, etc. conforme a profissão).</p>`; return; }
   const D = isSheetLocked() ? "disabled" : "";
   el.innerHTML = `
-    <div class="skills-table">
+    <div class="specialized-table">
       ${state.specialized.map((s, i) => `
         <div class="skill-row specialized-row">
           <select class="spec-group" data-i="${i}" ${D}>
@@ -2232,35 +2368,30 @@ function renderWeapons() {
       <button class="btn-small" id="weapon-picker-add" ${D}>+ adicionar da lista</button>
       <button class="btn-small" id="add-weapon-btn" ${D}>+ arma personalizada</button>
     </div>
-    <p class="muted small">Valores são referência — ajuste com o mestre conforme a arma exata. Em corpo a corpo/desarmado, some seu dano bônus.</p>
+    <p class="muted small">Valores são referência — ajuste com o mestre conforme a arma exata. Em corpo a corpo/desarmado, some seu dano bônus ao dano.</p>
   `;
   if (!state.weapons.length) {
     el.innerHTML = pickerHtml + `<p class="muted small">Nenhuma arma cadastrada ainda.</p>`;
   } else {
     el.innerHTML = pickerHtml + `
       <div class="weapon-list">
-        <div class="weapon-row weapon-head">
-          <span>Nome</span><span>Perícia</span><span>Dano</span><span>Tipo de dano</span><span>Letalidade %</span><span></span>
-        </div>
         ${state.weapons.map((w, i) => `
           <div class="weapon-card">
-            <div class="weapon-row">
+            <div class="weapon-row-main">
               <input type="text" class="wpn-name" data-i="${i}" placeholder="Nome da arma" value="${escapeHtml(w.name || "")}" ${D}>
               <select class="wpn-skill" data-i="${i}" ${D}>
                 ${COMBAT_SKILLS.map(s => `<option value="${s}" ${s === w.skill ? "selected" : ""}>${s}</option>`).join("")}
               </select>
-              <input type="text" class="wpn-damage" data-i="${i}" placeholder="ex: 2d6+2" value="${escapeHtml(w.damage || "")}" ${D}>
-              <select class="wpn-type" data-i="${i}" ${D}>
-                ${DAMAGE_TYPES.map(t => `<option value="${t}" ${t === w.damageType ? "selected" : ""}>${t}</option>`).join("")}
-              </select>
-              <input type="number" class="wpn-lethality" data-i="${i}" placeholder="opcional" value="${w.lethality ?? ""}" ${D}>
               <button class="btn-tiny" data-i="${i}" data-act="remove-weapon" ${D}>×</button>
             </div>
-            <div class="weapon-extra-row">
-              <label>Alcance<input type="text" class="wpn-range" data-i="${i}" placeholder="ex: 15m" value="${escapeHtml(w.range || "")}" ${D}></label>
-              <label>Cadência<input type="text" class="wpn-rof" data-i="${i}" placeholder="ex: 1/rodada" value="${escapeHtml(w.rof || "")}" ${D}></label>
-              <label>Capacidade<input type="text" class="wpn-capacity" data-i="${i}" placeholder="ex: 15+1" value="${escapeHtml(w.capacity || "")}" ${D}></label>
-              <label>Observações<input type="text" class="wpn-notes" data-i="${i}" placeholder="ex: raio de explosão, recarga..." value="${escapeHtml(w.notes || "")}" ${D}></label>
+            <div class="weapon-stat-row">
+              <span class="weapon-stat"><label>Hab. %</label><strong>${skillFinalValue(w.skill)}%</strong></span>
+              <span class="weapon-stat"><label>Alcance</label><input type="text" class="wpn-range" data-i="${i}" placeholder="ex: 15m" value="${escapeHtml(w.range || "")}" ${D}></span>
+              <span class="weapon-stat"><label>Dano</label><input type="text" class="wpn-damage" data-i="${i}" placeholder="ex: 2d6+2" value="${escapeHtml(w.damage || "")}" ${D}></span>
+              <span class="weapon-stat"><label>Perfuração</label><input type="text" class="wpn-perforation" data-i="${i}" placeholder="ex: -1" value="${escapeHtml(w.perforation || "")}" ${D}></span>
+              <span class="weapon-stat"><label>Letalidade %</label><input type="number" class="wpn-lethality" data-i="${i}" placeholder="opcional" value="${w.lethality ?? ""}" ${D}></span>
+              <span class="weapon-stat"><label>Raio</label><input type="text" class="wpn-radius" data-i="${i}" placeholder="ex: 3m" value="${escapeHtml(w.radius || "")}" ${D}></span>
+              <span class="weapon-stat"><label>Munição</label><input type="text" class="wpn-ammo" data-i="${i}" placeholder="ex: 15+1" value="${escapeHtml(w.ammo || "")}" ${D}></span>
             </div>
           </div>
         `).join("")}
@@ -2268,18 +2399,17 @@ function renderWeapons() {
     `;
   }
   el.querySelectorAll(".wpn-name").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].name = e.target.value; }));
-  el.querySelectorAll(".wpn-skill").forEach(sel => sel.addEventListener("change", (e) => { state.weapons[e.target.dataset.i].skill = e.target.value; }));
+  el.querySelectorAll(".wpn-skill").forEach(sel => sel.addEventListener("change", (e) => { state.weapons[e.target.dataset.i].skill = e.target.value; renderWeapons(); }));
   el.querySelectorAll(".wpn-damage").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].damage = e.target.value; }));
-  el.querySelectorAll(".wpn-type").forEach(sel => sel.addEventListener("change", (e) => { state.weapons[e.target.dataset.i].damageType = e.target.value; }));
+  el.querySelectorAll(".wpn-perforation").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].perforation = e.target.value; }));
   el.querySelectorAll(".wpn-lethality").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].lethality = e.target.value ? Number(e.target.value) : null; }));
   el.querySelectorAll(".wpn-range").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].range = e.target.value; }));
-  el.querySelectorAll(".wpn-rof").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].rof = e.target.value; }));
-  el.querySelectorAll(".wpn-capacity").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].capacity = e.target.value; }));
-  el.querySelectorAll(".wpn-notes").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].notes = e.target.value; }));
+  el.querySelectorAll(".wpn-radius").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].radius = e.target.value; }));
+  el.querySelectorAll(".wpn-ammo").forEach(inp => inp.addEventListener("input", (e) => { state.weapons[e.target.dataset.i].ammo = e.target.value; }));
   el.querySelectorAll("button[data-act=remove-weapon]").forEach(btn => btn.addEventListener("click", (e) => { state.weapons.splice(Number(e.target.dataset.i), 1); renderWeapons(); }));
   const addBtn = document.getElementById("add-weapon-btn");
   if (addBtn) addBtn.addEventListener("click", () => {
-    state.weapons.push({ name: "", skill: COMBAT_SKILLS[0], damage: "", damageType: DAMAGE_TYPES[0], lethality: null, range: "", rof: "", capacity: "", notes: "" });
+    state.weapons.push({ name: "", skill: COMBAT_SKILLS[0], damage: "", perforation: "", lethality: null, range: "", radius: "", ammo: "" });
     renderWeapons();
   });
   const pickBtn = document.getElementById("weapon-picker-add");
@@ -2289,7 +2419,7 @@ function renderWeapons() {
     const grp = WEAPON_PRESETS.find(g => g.group === gname);
     const item = grp && grp.items[Number(idx)];
     if (!item) return;
-    state.weapons.push({ name: item.name, skill: item.skill, damage: item.damage, damageType: item.damageType, lethality: item.lethality, range: item.range || "", rof: item.rof || "", capacity: item.capacity || "", notes: item.notes || "" });
+    state.weapons.push({ name: item.name, skill: item.skill, damage: item.damage, perforation: item.perforation || "", lethality: item.lethality, range: item.range || "", radius: item.radius || "", ammo: item.ammo || "" });
     renderWeapons();
   });
 }
