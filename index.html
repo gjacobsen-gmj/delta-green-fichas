@@ -108,7 +108,7 @@
     background-position: left center;
     pointer-events: none;
   }
-  #panel-mestre .sheet::before, #panel-batalha .sheet::before {
+  #panel-mestre .sheet::before, #panel-batalha .sheet::before, #panel-equipamentos .sheet::before {
     content: "CONFIDENCIAL — USO EXCLUSIVO DO MESTRE";
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
@@ -120,7 +120,7 @@
     pointer-events: none;
     z-index: 0;
   }
-  #panel-mestre .sheet > *, #panel-batalha .sheet > * { position: relative; z-index: 1; }
+  #panel-mestre .sheet > *, #panel-batalha .sheet > *, #panel-equipamentos .sheet > * { position: relative; z-index: 1; }
 
   .section {
     margin-bottom: 20px;
@@ -297,6 +297,39 @@
   .weapon-threshold-head { font-weight: 700; background: var(--black-bar) !important; color: #fff; }
 
   .weapon-master-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+
+  .armor-ref-table { border: 1px solid var(--ink); margin-top: 8px; }
+  .armor-ref-row { display: grid; grid-template-columns: 1fr 220px; padding: 6px 10px; font-size: 12.5px; border-bottom: 1px solid var(--line); }
+  @media (max-width: 560px) { .armor-ref-row { grid-template-columns: 1fr 100px; } }
+  .armor-ref-row:last-child { border-bottom: none; }
+  .armor-ref-row:nth-child(even) { background: var(--paper); }
+  .armor-ref-head { font-weight: 700; background: var(--black-bar) !important; color: #fff; }
+  .armor-ref-row span:last-child { font-family: 'IBM Plex Mono', monospace; text-align: right; }
+
+  /* ===== PESSOAS CADASTRADAS (mestre) ===== */
+  .roster-table { border: 1px solid var(--ink); }
+  .roster-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line);
+  }
+  @media (max-width: 700px) { .roster-row { grid-template-columns: 1fr 1fr; grid-template-areas: "nick name" "prof actions"; } }
+  .roster-row:last-child { border-bottom: none; }
+  .roster-row:nth-child(even) { background: var(--paper); }
+  .roster-head { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; background: var(--black-bar) !important; color: #fff; }
+  .roster-row input { font-size: 12.5px; padding: 5px 7px; margin: 0; }
+  .roster-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+  /* ===== MODAL ALTERAR SENHA ===== */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px;
+  }
+  .modal-box {
+    background: var(--paper); border: 1px solid var(--ink); max-width: 380px; width: 100%; padding: 22px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+  .modal-box h3 { font-family: 'Special Elite', monospace; margin: 0 0 6px; letter-spacing: 1px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
   .weapon-master-card { background: #fff; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
   .weapon-master-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
   .weapon-master-stats { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: var(--ink-soft); }
@@ -481,6 +514,11 @@
   .monster-card { border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; background: var(--paper); }
   .monster-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   .monster-card-actions { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .combat-ref-body { margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+  .combat-ref-block { border-left: 3px solid var(--red); padding: 2px 12px; }
+  .combat-ref-block h4 { margin: 0 0 4px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; letter-spacing: 0.5px; }
+  .combat-ref-block p { margin: 0; line-height: 1.5; color: var(--ink-soft); }
 </style>
 </head>
 <body>
@@ -517,7 +555,22 @@
   <p>GERADOR DE FICHAS DE AGENTE — USO RESTRITO</p>
   <div class="role-bar">
     <span id="role-badge"></span>
+    <button class="btn-small" id="change-pass-btn" onclick="openChangePassword()" style="display:none;">Alterar senha</button>
     <button class="btn-small" onclick="logout()">Sair</button>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="change-pass-modal" style="display:none;">
+  <div class="modal-box">
+    <h3>Alterar Senha</h3>
+    <p class="muted small">Isso altera a senha do apelido <strong id="change-pass-nick"></strong>, usada para entrar como jogador.</p>
+    <label>Senha atual<input type="password" id="cp-old"></label>
+    <label>Nova senha<input type="password" id="cp-new"></label>
+    <label>Confirmar nova senha<input type="password" id="cp-confirm"></label>
+    <div class="modal-actions">
+      <button class="btn-small" onclick="closeChangePassword()">Cancelar</button>
+      <button class="btn-primary" onclick="submitChangePassword()">Salvar nova senha</button>
+    </div>
   </div>
 </div>
 
@@ -526,6 +579,7 @@
   <div class="tab" data-tab="fichas" data-role="jogador" onclick="switchTab('fichas')">Fichas Salvas</div>
   <div class="tab" data-tab="progressao" data-role="jogador" onclick="switchTab('progressao')">Progressão (Fim de Sessão)</div>
   <div class="tab" data-tab="mestre" data-role="mestre" onclick="switchTab('mestre')">Mestre (Tempo Real)</div>
+  <div class="tab" data-tab="equipamentos" data-role="mestre" onclick="switchTab('equipamentos')">Equipamentos</div>
   <div class="tab" data-tab="batalha" data-role="mestre" onclick="switchTab('batalha')">Batalha</div>
 </div>
 
@@ -646,8 +700,36 @@
       <div id="master-list"></div>
 
       <div class="section" style="margin-top:28px;">
+        <div class="section-title">Pessoas Cadastradas</div>
+        <p class="muted small">Edite o apelido do jogador, o nome do agente ou a profissão diretamente aqui e clique em salvar (✓). Também é possível excluir uma ficha permanentemente.</p>
+        <div id="master-roster"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-equipamentos">
+    <div class="sheet">
+      <div class="section">
         <div class="section-title">Arsenal — Todas as Armas em Campo</div>
+        <p class="muted small">Reúne automaticamente as armas cadastradas em todas as fichas salvas, com quem está com cada uma.</p>
         <div id="master-arsenal"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Referência — Armadura e Cobertura</div>
+        <p class="muted small">Redução de dano de ataques comuns (não afeta testes de Letalidade bem-sucedidos — só o dano de uma falha na Letalidade).</p>
+        <div class="armor-ref-table">
+          <div class="armor-ref-row armor-ref-head"><span>Proteção</span><span>Redução</span></div>
+          <div class="armor-ref-row"><span>Capacete de Kevlar</span><span>1 (só contra estilhaços)</span></div>
+          <div class="armor-ref-row"><span>Colete de Kevlar concealável</span><span>3</span></div>
+          <div class="armor-ref-row"><span>Colete reforçado (típico de policiais)</span><span>4</span></div>
+          <div class="armor-ref-row"><span>Armadura tática (militares/SWAT), parede fina, porta grossa</span><span>5</span></div>
+          <div class="armor-ref-row"><span>Traje antibombas, parede de concreto, blindagem leve</span><span>10</span></div>
+          <div class="armor-ref-row"><span>Parede reforçada, sacos de areia, blindagem média</span><span>15</span></div>
+          <div class="armor-ref-row"><span>Blindagem pesada / tanque leve</span><span>20</span></div>
+          <div class="armor-ref-row"><span>Blindagem de tanque pesado</span><span>25</span></div>
+        </div>
+        <p class="muted small" style="margin-top:8px;">Fontes de proteção se somam (ex: colete + atrás de uma parede). Armas perfurantes reduzem a proteção do alvo pelo valor de Perfuração antes de aplicar a redução.</p>
       </div>
     </div>
   </div>
@@ -676,6 +758,29 @@
       <div class="section">
         <div class="section-title">Biblioteca de Monstros</div>
         <div id="monster-library"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Referência Rápida de Combate</div>
+        <button class="btn-small" id="combat-ref-toggle">Mostrar referência</button>
+        <div id="combat-ref-body" class="combat-ref-body" style="display:none;">
+          <div class="combat-ref-block">
+            <h4>Teste de Letalidade</h4>
+            <p class="small">Armas com Letalidade % (metralhadoras, fuzis pesados, explosivos, disparo automático) podem matar direto. Ao acertar, role 1D100 contra a Letalidade da arma: sucesso derruba o alvo humano a 0 PV na hora; falha soma os dois dados como se fossem 1D10+1D10 e aplica isso como dano normal. Um acerto crítico no ataque dobra a Letalidade e dobra o dano em caso de falha na Letalidade.</p>
+          </div>
+          <div class="combat-ref-block">
+            <h4>Raio de Explosão e Supressão</h4>
+            <p class="small">Armas com Raio afetam todos dentro da área com um teste de Letalidade cada (acerto na área dá +20% de chance). Qualquer combatente que perceba estar dentro do raio, mesmo se o ataque errar, precisa se abrigar ou deitar no turno seguinte — ou gastar 1 SAN para agir normalmente sob fogo de supressão.</p>
+          </div>
+          <div class="combat-ref-block">
+            <h4>Disparo Seletivo</h4>
+            <p class="small">Rajada curta: 3 tiros, 1 alvo. Rajada longa: 5 tiros, raio 1m. Disparo curto (spray): 10 tiros, raio 2m. Disparo longo (spray): 20 tiros, raio 3m. Todos usam a Letalidade da arma em vez de dano fixo.</p>
+          </div>
+          <div class="combat-ref-block">
+            <h4>Estágios de Proteção do Alvo</h4>
+            <p class="small"><b>Frágil:</b> qualquer dano derruba a 0 PV. <b>Exposto:</b> padrão — dano normal. <b>Blindado:</b> reduz dano de ataques comuns pelo valor de armadura (veja a aba Equipamentos); numa Letalidade bem-sucedida, a armadura não ajuda em nada. <b>Enorme</b> (veículos, paredes): converte uma Letalidade bem-sucedida em dano igual à própria taxa de Letalidade, em vez de derrubar a 0 PV. <b>Transcendente:</b> imune a dano convencional.</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1052,10 +1157,44 @@ function logout() {
   location.reload();
 }
 
+// ============ ALTERAR SENHA (perfil do jogador) ============
+function openChangePassword() {
+  document.getElementById("change-pass-nick").textContent = auth.nick;
+  document.getElementById("cp-old").value = "";
+  document.getElementById("cp-new").value = "";
+  document.getElementById("cp-confirm").value = "";
+  document.getElementById("change-pass-modal").style.display = "flex";
+}
+
+function closeChangePassword() {
+  document.getElementById("change-pass-modal").style.display = "none";
+}
+
+async function submitChangePassword() {
+  const oldPass = document.getElementById("cp-old").value;
+  const newPass = document.getElementById("cp-new").value;
+  const confirmPass = document.getElementById("cp-confirm").value;
+  if (!oldPass || !newPass) { toast("Preencha a senha atual e a nova senha.", true); return; }
+  if (newPass.length < 4) { toast("A nova senha deve ter pelo menos 4 caracteres.", true); return; }
+  if (newPass !== confirmPass) { toast("A confirmação não bate com a nova senha.", true); return; }
+  try {
+    const ok = await sbFetch("rpc/player_change_password", {
+      method: "POST",
+      body: JSON.stringify({ p_nick: auth.nick, p_old_password: oldPass, p_new_password: newPass }),
+    });
+    if (!ok) { toast("Senha atual incorreta.", true); return; }
+    toast("Senha alterada com sucesso.");
+    closeChangePassword();
+  } catch (e) {
+    toast("Erro ao alterar senha: " + e.message, true);
+  }
+}
+
 async function enterApp() {
   document.getElementById("login-gate").style.display = "none";
   document.getElementById("app-shell").style.display = "block";
   document.getElementById("role-badge").textContent = auth.role === "mestre" ? `Mestre` : `Jogador: ${auth.nick}`;
+  document.getElementById("change-pass-btn").style.display = auth.role === "jogador" ? "" : "none";
   document.querySelectorAll(".tab[data-role=mestre]").forEach(el => {
     el.style.display = auth.role === "mestre" ? "" : "none";
   });
@@ -1412,7 +1551,9 @@ async function deleteCharacter(id) {
   try {
     await sbFetch(`characters?id=eq.${id}`, { method: "DELETE", prefer: "return=minimal" });
     toast("Ficha excluída.");
-    loadCharacterList();
+    if (document.getElementById("char-list")) loadCharacterList();
+    if (document.getElementById("master-roster")) loadRoster();
+    if (document.getElementById("master-list")) loadMasterView();
   } catch (e) {
     toast("Erro ao excluir: " + e.message, true);
   }
@@ -1496,6 +1637,65 @@ function renderArsenal(rows) {
       `).join("")}
     </div>
   `;
+}
+
+// ============ PESSOAS CADASTRADAS (mestre edita jogador/agente/profissão) ============
+async function loadRoster() {
+  const el = document.getElementById("master-roster");
+  if (!el) return;
+  try {
+    const rows = await sbFetch("characters?select=id,name,owner_nick,profession,updated_at&order=owner_nick.asc,name.asc");
+    renderRoster(rows);
+  } catch (e) {
+    el.innerHTML = `<p class="muted small">Erro ao carregar: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderRoster(rows) {
+  const el = document.getElementById("master-roster");
+  if (!el) return;
+  if (!rows.length) { el.innerHTML = `<p class="muted small">Nenhuma pessoa cadastrada ainda.</p>`; return; }
+  el.innerHTML = `
+    <div class="roster-table">
+      <div class="roster-row roster-head">
+        <span>Jogador (apelido)</span><span>Nome do Agente</span><span>Profissão</span><span></span>
+      </div>
+      ${rows.map(r => `
+        <div class="roster-row">
+          <input type="text" class="roster-nick" data-id="${r.id}" value="${escapeHtml(r.owner_nick || "")}" placeholder="apelido do jogador">
+          <input type="text" class="roster-name" data-id="${r.id}" value="${escapeHtml(r.name || "")}" placeholder="nome do agente">
+          <input type="text" class="roster-profession" data-id="${r.id}" value="${escapeHtml(r.profession || "")}" placeholder="profissão">
+          <span class="roster-actions">
+            <button class="btn-tiny" data-id="${r.id}" data-act="roster-save" title="Salvar alterações">✓</button>
+            <button class="btn-tiny btn-danger" data-id="${r.id}" data-act="roster-delete" title="Excluir ficha">×</button>
+          </span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+  el.querySelectorAll("button[data-act=roster-save]").forEach(btn => btn.addEventListener("click", () => saveRosterRow(btn.dataset.id)));
+  el.querySelectorAll("button[data-act=roster-delete]").forEach(btn => btn.addEventListener("click", () => deleteCharacter(btn.dataset.id)));
+}
+
+async function saveRosterRow(id) {
+  const nickInp = document.querySelector(`.roster-nick[data-id="${id}"]`);
+  const nameInp = document.querySelector(`.roster-name[data-id="${id}"]`);
+  const profInp = document.querySelector(`.roster-profession[data-id="${id}"]`);
+  if (!nickInp || !nameInp || !profInp) return;
+  const payload = {
+    owner_nick: nickInp.value.trim(),
+    name: nameInp.value.trim(),
+    profession: profInp.value.trim(),
+    updated_at: new Date().toISOString(),
+  };
+  try {
+    await sbFetch(`characters?id=eq.${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+    toast("Dados atualizados.");
+    if (masterRowsCache[id]) Object.assign(masterRowsCache[id], payload);
+    if (document.getElementById("master-list")) loadMasterView();
+  } catch (e) {
+    toast("Erro ao salvar: " + e.message, true);
+  }
 }
 
 function renderMasterCard(r) {
@@ -1980,6 +2180,7 @@ function timeAgo(iso) {
 function startMasterPolling() {
   stopMasterPolling();
   loadMasterView();
+  loadRoster();
   masterPollTimer = setInterval(loadMasterView, 4000);
 }
 function stopMasterPolling() {
@@ -2085,6 +2286,7 @@ function switchTab(tab) {
   if (tab === "fichas") loadCharacterList();
   if (tab === "progressao") loadProgressionList();
   if (tab === "mestre") startMasterPolling(); else stopMasterPolling();
+  if (tab === "equipamentos") loadMasterView();
   if (tab === "batalha") loadBattleTab(); else stopBattlePolling();
 }
 
@@ -2508,6 +2710,17 @@ function renderSummary() {
   document.getElementById("battle-next-btn").addEventListener("click", battleNextTurn);
   document.getElementById("battle-prev-btn").addEventListener("click", battlePrevTurn);
   document.getElementById("battle-reset-btn").addEventListener("click", battleResetCombat);
+  document.getElementById("combat-ref-toggle").addEventListener("click", (e) => {
+    const body = document.getElementById("combat-ref-body");
+    const showing = body.style.display !== "none";
+    body.style.display = showing ? "none" : "flex";
+    e.target.textContent = showing ? "Mostrar referência" : "Ocultar referência";
+  });
+
+  document.getElementById("change-pass-modal").addEventListener("click", (e) => {
+    if (e.target.id === "change-pass-modal") closeChangePassword();
+  });
+  document.getElementById("cp-confirm").addEventListener("keydown", (e) => { if (e.key === "Enter") submitChangePassword(); });
 
   // Auto-login se já houver sessão salva neste navegador
   if (auth.role === "jogador" || auth.role === "mestre") {
