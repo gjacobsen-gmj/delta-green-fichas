@@ -574,6 +574,19 @@
   </div>
 </div>
 
+<div class="modal-backdrop" id="master-reset-pass-modal" style="display:none;">
+  <div class="modal-box">
+    <h3>Redefinir Senha</h3>
+    <p class="muted small">Defina uma nova senha de acesso para o apelido <strong id="mrp-nick"></strong>. Não é preciso saber a senha atual.</p>
+    <label>Nova senha<input type="password" id="mrp-new"></label>
+    <label>Confirmar nova senha<input type="password" id="mrp-confirm"></label>
+    <div class="modal-actions">
+      <button class="btn-small" onclick="closeMasterResetPassword()">Cancelar</button>
+      <button class="btn-primary" onclick="submitMasterResetPassword()">Redefinir senha</button>
+    </div>
+  </div>
+</div>
+
 <div class="tabs">
   <div class="tab active" data-tab="criar" data-role="jogador" onclick="switchTab('criar')">Criar Ficha</div>
   <div class="tab" data-tab="fichas" data-role="jogador" onclick="switchTab('fichas')">Fichas Salvas</div>
@@ -1190,6 +1203,40 @@ async function submitChangePassword() {
   }
 }
 
+// ============ REDEFINIR SENHA DE JOGADOR (mestre) ============
+let masterResetPassNick = "";
+
+function openMasterResetPassword(nick) {
+  masterResetPassNick = nick;
+  document.getElementById("mrp-nick").textContent = nick;
+  document.getElementById("mrp-new").value = "";
+  document.getElementById("mrp-confirm").value = "";
+  document.getElementById("master-reset-pass-modal").style.display = "flex";
+}
+
+function closeMasterResetPassword() {
+  document.getElementById("master-reset-pass-modal").style.display = "none";
+}
+
+async function submitMasterResetPassword() {
+  const newPass = document.getElementById("mrp-new").value;
+  const confirmPass = document.getElementById("mrp-confirm").value;
+  if (!newPass) { toast("Digite a nova senha.", true); return; }
+  if (newPass.length < 4) { toast("A nova senha deve ter pelo menos 4 caracteres.", true); return; }
+  if (newPass !== confirmPass) { toast("A confirmação não bate com a nova senha.", true); return; }
+  try {
+    const ok = await sbFetch("rpc/master_reset_password", {
+      method: "POST",
+      body: JSON.stringify({ p_nick: masterResetPassNick, p_new_password: newPass }),
+    });
+    if (!ok) { toast("Não foi possível redefinir a senha.", true); return; }
+    toast(`Senha de "${masterResetPassNick}" redefinida.`);
+    closeMasterResetPassword();
+  } catch (e) {
+    toast("Erro ao redefinir senha: " + e.message, true);
+  }
+}
+
 async function enterApp() {
   document.getElementById("login-gate").style.display = "none";
   document.getElementById("app-shell").style.display = "block";
@@ -1667,6 +1714,7 @@ function renderRoster(rows) {
           <input type="text" class="roster-profession" data-id="${r.id}" value="${escapeHtml(r.profession || "")}" placeholder="profissão">
           <span class="roster-actions">
             <button class="btn-tiny" data-id="${r.id}" data-act="roster-save" title="Salvar alterações">✓</button>
+            <button class="btn-tiny" data-id="${r.id}" data-act="roster-reset-pass" title="Redefinir senha">🔑</button>
             <button class="btn-tiny btn-danger" data-id="${r.id}" data-act="roster-delete" title="Excluir ficha">×</button>
           </span>
         </div>
@@ -1674,6 +1722,12 @@ function renderRoster(rows) {
     </div>
   `;
   el.querySelectorAll("button[data-act=roster-save]").forEach(btn => btn.addEventListener("click", () => saveRosterRow(btn.dataset.id)));
+  el.querySelectorAll("button[data-act=roster-reset-pass]").forEach(btn => btn.addEventListener("click", () => {
+    const nickInp = document.querySelector(`.roster-nick[data-id="${btn.dataset.id}"]`);
+    const nick = nickInp ? nickInp.value.trim() : "";
+    if (!nick) { toast("Preencha o apelido do jogador antes de redefinir a senha.", true); return; }
+    openMasterResetPassword(nick);
+  }));
   el.querySelectorAll("button[data-act=roster-delete]").forEach(btn => btn.addEventListener("click", () => deleteCharacter(btn.dataset.id)));
 }
 
@@ -2721,6 +2775,11 @@ function renderSummary() {
     if (e.target.id === "change-pass-modal") closeChangePassword();
   });
   document.getElementById("cp-confirm").addEventListener("keydown", (e) => { if (e.key === "Enter") submitChangePassword(); });
+
+  document.getElementById("master-reset-pass-modal").addEventListener("click", (e) => {
+    if (e.target.id === "master-reset-pass-modal") closeMasterResetPassword();
+  });
+  document.getElementById("mrp-confirm").addEventListener("keydown", (e) => { if (e.key === "Enter") submitMasterResetPassword(); });
 
   // Auto-login se já houver sessão salva neste navegador
   if (auth.role === "jogador" || auth.role === "mestre") {
